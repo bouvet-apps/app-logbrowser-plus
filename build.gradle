@@ -6,7 +6,7 @@ plugins {
 
 app {
     name = project.appName
-    displayName = 'Log Browser'
+    displayName = 'Log Browser Plus'
     vendorName = 'Enonic AS'
     vendorUrl = 'https://enonic.com'
     systemVersion = "${xpVersion}"

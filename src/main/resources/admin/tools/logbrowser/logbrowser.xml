@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <tool xmlns="urn:enonic:xp:model:1.0">
-  <display-name>Log Browser</display-name>
+  <display-name>Log Browser Plus</display-name>
   <description>Browse and search the log</description>
   <allow>
     <principal>role:system.admin</principal>

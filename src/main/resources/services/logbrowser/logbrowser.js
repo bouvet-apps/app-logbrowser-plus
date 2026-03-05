@@ -1,5 +1,8 @@
 var logFileLib = require('/lib/logfile');
 var webSocketLib = require('/lib/xp/websocket');
+var Files = Java.type('java.nio.file.Files');
+var Paths = Java.type('java.nio.file.Paths');
+var StandardCharsets = Java.type('java.nio.charset.StandardCharsets');
 
 // return current pos, line array, lineCount, eof: boolean
 var handlePost = function (req) {
@@ -52,10 +55,57 @@ var handleGet = function (req) {
         };
     }
 
+    if (req.params.action === 'download') {
+        return downloadLogFile();
+    }
+
     return {
         status: 204
     };
 };
+
+var downloadLogFile = function () {
+    var logPath = logFileLib.getLogPath();
+    var path = Paths.get(logPath);
+
+    if (!Files.exists(path)) {
+        return {
+            status: 404,
+            contentType: 'text/plain; charset=UTF-8',
+            body: 'Log file not found.'
+        };
+    }
+
+    var now = new Date();
+    var timestamp = now.getFullYear().toString() +
+        pad(now.getMonth() + 1) +
+        pad(now.getDate()) + '-' +
+        pad(now.getHours()) +
+        pad(now.getMinutes()) +
+        pad(now.getSeconds());
+
+    try {
+        var content = new java.lang.String(Files.readAllBytes(path), StandardCharsets.UTF_8);
+        return {
+            contentType: 'text/plain; charset=UTF-8',
+            headers: {
+                'Content-Disposition': 'attachment; filename="server-' + timestamp + '.log.txt"'
+            },
+            body: content
+        };
+    } catch (e2) {
+        return {
+            status: 500,
+            contentType: 'text/plain; charset=UTF-8',
+            body: 'Unable to read log file.'
+        }
+    }
+
+};
+
+var pad = function (value) {
+    return value < 10 ? '0' + value : String(value);
+}
 
 var handleWebSocket = function (event) {
     var sessionId = event.session.id;

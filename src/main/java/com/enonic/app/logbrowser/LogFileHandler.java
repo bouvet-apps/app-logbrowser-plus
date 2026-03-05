@@ -71,6 +71,11 @@ public class LogFileHandler
         return new LogLinesMapper( readLog() );
     }
 
+    public String getLogPath()
+    {
+        return LogHelper.getLogPath().toString();
+    }
+
     private LogContext readLog()
         throws IOException
     {
