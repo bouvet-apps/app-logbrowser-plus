@@ -204,7 +204,7 @@
     var downloadClick = function (e) {
         e.preventDefault();
         $(this).blur();
-        window.location = svcUrl + '?action=downlaod';
+        window.location = svcUrl + '?action=download';
     };
 
     var searchClick = function () {

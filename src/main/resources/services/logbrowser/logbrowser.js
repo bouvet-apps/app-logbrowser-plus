@@ -55,7 +55,7 @@ var handleGet = function (req) {
         };
     }
 
-    if (req.webSocket.action === "download") {
+    if (req.params.action === 'download') {
         return downloadLogFile();
     }
 
@@ -67,15 +67,8 @@ var handleGet = function (req) {
 var downloadLogFile = function () {
     var logPath = logFileLib.getLogPath();
     var path = Paths.get(logPath);
-    var fileExists;
 
-    try {
-        fileExists = fileExists.exists(path);
-    } catch (e) {
-        fileExists = false;
-    }
-
-    if (!fileExists) {
+    if (!Files.exists(path)) {
         return {
             status: 404,
             contentType: 'text/plain; charset=UTF-8',
@@ -96,7 +89,7 @@ var downloadLogFile = function () {
         return {
             contentType: 'text/plain; charset=UTF-8',
             headers: {
-                'Content-Disposition': 'attachment; filename="server-log-' + timestamp + '.txt"'
+                'Content-Disposition': 'attachment; filename="server-' + timestamp + '.log.txt"'
             },
             body: content
         };
