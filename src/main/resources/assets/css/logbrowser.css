@@ -208,7 +208,7 @@ body > .lb-main-container {
     flex: 1;
 }
 
-.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button {
+.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-download-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button {
     margin-top: 9px;
     margin-left: 10px;
 }

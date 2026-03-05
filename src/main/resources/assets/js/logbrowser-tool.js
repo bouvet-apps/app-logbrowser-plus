@@ -29,6 +29,7 @@
         $('#endBut,#endMobBut').on('click', endClick);
         $('#followBut').on('click', followClick);
         $('#stopFollowBut').on('click', stopFollowClick);
+        $('#downloadBut').on('click', downloadClick);
         $('#searchBut,#searchMobBut').on('click', searchClick);
         $('.lb-close').on('click', closeSearchClick);
         $('.lb-overlay').on('click', function (e) {
@@ -198,6 +199,12 @@
         $(this).blur();
 
         stopFollowLog();
+    };
+
+    var downloadClick = function (e) {
+        e.preventDefault();
+        $(this).blur();
+        window.location = svcUrl + '?action=downlaod';
     };
 
     var searchClick = function () {

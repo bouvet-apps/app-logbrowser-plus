@@ -12,6 +12,11 @@ exports.getLines = function (params) {
     return __.toNativeObject(bean.getLines());
 };
 
+exports.getLogPath = function () {
+    var bean = __.newBean('com.enonic.app.logbrowser.LogFileHandler');
+    return bean.getLogPath();
+};
+
 exports.newLogListener = function (id, initialPos, lineCount, onNewLogLines) {
     var callback = function (newLines) {
         onNewLogLines(__.toNativeObject(newLines));
