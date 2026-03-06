@@ -119,12 +119,40 @@ body > .lb-main-container {
     line-height: 1.25em;
     white-space: pre-wrap;
     word-break: break-all;
+    transition: filter 120ms ease, background-color 120ms ease;
+}
+
+.lb-logline.lb-logline-error {
+    color: #E09690;
+}
+
+.lb-logline.lb-logline-warn {
+    color: #CACA00;
+}
+
+.lb-logline.lb-logline-info {
+    color: #9CD9F0;
+}
+
+.lb-logline.lb-logline-debug {
+    color: #22da26;
+}
+
+.lb-logline.lb-logline-trace {
+    color: #719600;
 }
 
 .lb-logline:hover {
     background-color: #2e2e2e;
-    color: #d1f75f;
     cursor: pointer;
+}
+
+.lb-logline.lb-logline-error:hover,
+.lb-logline.lb-logline-warn:hover,
+.lb-logline.lb-logline-info:hover,
+.lb-logline.lb-logline-debug:hover,
+.lb-logline.lb-logline-trace:hover {
+    filter: brightness(0.85);
 }
 
 .lb-logline mark {

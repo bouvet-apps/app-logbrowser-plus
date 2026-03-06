@@ -436,11 +436,13 @@
     };
 
     var showLines = function (lines) {
-        var lineEl, i, linesEl = [], l = lines.length, lineText, p, part;
+        var lineEl, i, linesEl = [], l = lines.length, lineText, p, part, lineClasses, levelClass;
         var searchExpr = g_searchRegex ? g_searchText : escapeRegExp(g_searchText);
         var searchRegexp = new RegExp('(' + searchExpr + ')', g_searchMatchCase ? 'g' : 'gi');
         for (i = 0; i < l; i++) {
             lineText = lines[i].value;
+            levelClass = getLogLevelClass(lineText);
+            lineClasses = 'lb-logline' + (levelClass ? (' ' + levelClass) : '');
             if (g_searchText) {
                 var parts = lineText.split(searchRegexp);
 
@@ -453,13 +455,35 @@
                         lineParts.push(document.createTextNode(part));
                     }
                 }
-                lineEl = $('<span/>').addClass('lb-logline').append(lineParts);
+                lineEl = $('<span/>').addClass(lineClasses).append(lineParts);
             } else {
-                lineEl = $('<span/>').addClass('lb-logline').text(lineText);
+                lineEl = $('<span/>').addClass(lineClasses).text(lineText);
             }
             linesEl.push(lineEl);
         }
         $lbScreen.empty().append(linesEl);
+    };
+
+    var getLogLevelClass = function (lineText) {
+        var upperLine = (lineText || '').toUpperCase();
+
+        if (/(^|\W)(ERROR|FATAL|SEVERE)(\W|$)/.test(upperLine)) {
+            return 'lb-logline-error';
+        }
+        if (/(^|\W)(WARN|WARNING)(\W|$)/.test(upperLine)) {
+            return 'lb-logline-warn';
+        }
+        if (/(^|\W)(INFO)(\W|$)/.test(upperLine)) {
+            return 'lb-logline-info';
+        }
+        if (/(^|\W)(DEBUG)(\W|$)/.test(upperLine)) {
+            return 'lb-logline-debug';
+        }
+        if (/(^|\W)(TRACE)(\W|$)/.test(upperLine)) {
+            return 'lb-logline-trace';
+        }
+
+        return '';
     };
 
     var debounce = function (func, wait, immediate) {
