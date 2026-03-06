@@ -7,6 +7,20 @@
         g_searchForward = true,
         g_searchRegex = false;
 
+    // State model for filtering and grouping
+    var g_activeFilters = new Set(); // Active severity levels: 'error', 'warn', 'info', 'debug', 'trace'
+    var g_groupedEvents = []; // Array of event objects: { headerIdx, indices[], severity, isCollapsed, eventId }
+    var g_collapsedEvents = new Map(); // Map of eventId -> isCollapsed (true/false)
+    var g_eventCounts = {  // Counts by level
+        total: 0,
+        error: 0,
+        warn: 0,
+        info: 0,
+        debug: 0,
+        trace: 0,
+        other: 0
+    };
+
     $(function () {
         $lbScreen = $('.lb-screen');
         $loadingCursor = $('.cursor-blink');

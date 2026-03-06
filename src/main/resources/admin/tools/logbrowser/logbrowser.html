@@ -55,10 +55,59 @@
 </div>
 
 <div class="lb-main-container">
-    <div class="lb-screen">
-        <span class="lb-logline">…</span>
+    <div class="lb-content-wrapper">
+        <div class="lb-screen">
+            <span class="lb-logline">…</span>
+        </div>
     </div>
-
+    <div class="lb-sidebar">
+        <div class="lb-sidebar-section">
+            <div class="lb-sidebar-title">Summary</div>
+            <div class="lb-summary-bar">
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Total:</span>
+                    <span class="lb-count-value" data-count-type="total">0</span>
+                </div>
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Error:</span>
+                    <span class="lb-count-value lb-logline-error" data-count-type="error">0</span>
+                </div>
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Warn:</span>
+                    <span class="lb-count-value lb-logline-warn" data-count-type="warn">0</span>
+                </div>
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Info:</span>
+                    <span class="lb-count-value lb-logline-info" data-count-type="info">0</span>
+                </div>
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Debug:</span>
+                    <span class="lb-count-value lb-logline-debug" data-count-type="debug">0</span>
+                </div>
+                <div class="lb-summary-item">
+                    <span class="lb-count-label">Trace:</span>
+                    <span class="lb-count-value lb-logline-trace" data-count-type="trace">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="lb-sidebar-section">
+            <div class="lb-sidebar-title">Filter by Level</div>
+            <div class="lb-filter-chips">
+                <button class="lb-filter-chip lb-filter-chip-error" data-level="error">Error</button>
+                <button class="lb-filter-chip lb-filter-chip-warn" data-level="warn">Warn</button>
+                <button class="lb-filter-chip lb-filter-chip-info" data-level="info">Info</button>
+                <button class="lb-filter-chip lb-filter-chip-debug" data-level="debug">Debug</button>
+                <button class="lb-filter-chip lb-filter-chip-trace" data-level="trace">Trace</button>
+            </div>
+        </div>
+        <div class="lb-sidebar-section">
+            <div class="lb-sidebar-title">Collapse Events</div>
+            <div class="lb-collapse-controls">
+                <button id="collapseAllBut" class="lb-collapse-button">Collapse All</button>
+                <button id="expandAllBut" class="lb-collapse-button">Expand All</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div id="searchModal" class="lb-overlay">
