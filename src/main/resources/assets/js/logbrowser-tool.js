@@ -8,7 +8,7 @@
         g_searchRegex = false;
 
     // State model for filtering and grouping
-    var g_activeFilters = new Set(); // Active severity levels: 'error', 'warn', 'info', 'debug', 'trace'
+    var g_activeFilters = new Set(['error', 'warn', 'info', 'debug', 'trace']); // Active severity levels: 'error', 'warn', 'info', 'debug', 'trace'
     var g_groupedEvents = []; // Array of event objects: { headerIdx, indices[], severity, isCollapsed, eventId }
     var g_collapsedEvents = new Map(); // Map of eventId -> isCollapsed (true/false)
     var g_eventCounts = {  // Counts by level
@@ -22,6 +22,7 @@
     };
     var g_globalEventCounts = null;
     var g_lastStatsFetchAt = 0;
+    var g_isFillingFilteredWindow = false;
 
     $(function () {
         $lbScreen = $('.lb-screen');
@@ -40,6 +41,8 @@
 
         fetchLines(g_linesHeight, 0, 'forward');
         fetchGlobalStats(true);
+        bindFilterChips();
+        updateFilterChipUi();
         $('#upBut').on('click', pageUpClick);
         $('#downBut').on('click', pageDownClick);
         $('#startBut,#startMobBut').on('click', startClick);
@@ -287,6 +290,11 @@
     };
 
     var previousPage = function () {
+        if (isSelectiveFilterActive()) {
+            jumpToFilteredMatch('backward');
+            return;
+        }
+
         if (isTopPosition()) {
             return;
         }
@@ -303,6 +311,11 @@
     };
 
     var nextPage = function () {
+        if (isSelectiveFilterActive()) {
+            jumpToFilteredMatch('forward');
+            return;
+        }
+
         var lastLine, fromPos;
         if (g_currentLines.length === 0) {
             fromPos = 0;
@@ -315,6 +328,11 @@
     };
 
     var nextLine = function () {
+        if (isSelectiveFilterActive()) {
+            jumpToFilteredMatch('forward');
+            return;
+        }
+
         var firstLine, fromPos;
         if (g_currentLines.length === 0) {
             fromPos = 0;
@@ -327,6 +345,11 @@
     };
 
     var previousLine = function () {
+        if (isSelectiveFilterActive()) {
+            jumpToFilteredMatch('backward');
+            return;
+        }
+
         if (isTopPosition()) {
             return;
         }
@@ -435,8 +458,20 @@
 
             g_currentLines = resp.lines || [];
             rebuildGroupedState(g_currentLines);
-            showLines(g_currentLines);
-            if (action === 'end') {
+            var visibleCount = showLines(g_currentLines);
+
+            if (visibleCount === 0 && isSelectiveFilterActive() && action !== 'searchForward' && action !== 'searchBackward') {
+                if (action === 'backward') {
+                    jumpToFilteredMatch('backward');
+                } else {
+                    jumpToFilteredMatch('forward');
+                }
+                return;
+            }
+
+            if (isSelectiveFilterActive()) {
+                fillFilteredViewport(visibleCount);
+            } else if (action === 'end') {
                 setTimeout(removeTopOverflownRows, 0);
             } else {
                 setTimeout(removeOverflownRows, 0);
@@ -465,6 +500,9 @@
 
         for (eventIdx = 0; eventIdx < events.length; eventIdx++) {
             eventItem = events[eventIdx];
+            if (!isEventVisible(eventItem)) {
+                continue;
+            }
             levelClass = getSeverityClass(eventItem.severity);
 
             for (lineIdx = 0; lineIdx < eventItem.indices.length; lineIdx++) {
@@ -505,6 +543,210 @@
         }
 
         $lbScreen.empty().append(linesEl);
+        return linesEl.length;
+    };
+
+    var bindFilterChips = function () {
+        $('.lb-filter-chip').on('click', function () {
+            var level = $(this).data('level');
+            if (!level) {
+                return;
+            }
+
+            if (g_activeFilters.has(level)) {
+                g_activeFilters.delete(level);
+            } else {
+                g_activeFilters.add(level);
+            }
+
+            if (g_activeFilters.size === 0) {
+                g_activeFilters = new Set(['error', 'warn', 'info', 'debug', 'trace']);
+            }
+
+            updateFilterChipUi();
+            var visibleCount = showLines(g_currentLines);
+            if (visibleCount === 0) {
+                jumpToFilteredMatch('forward');
+            } else if (isSelectiveFilterActive()) {
+                fillFilteredViewport(visibleCount);
+            }
+        });
+    };
+
+    var updateFilterChipUi = function () {
+        $('.lb-filter-chip').each(function () {
+            var level = $(this).data('level');
+            $(this).toggleClass('active', g_activeFilters.has(level));
+        });
+    };
+
+    var isEventVisible = function (eventItem) {
+        if (!eventItem || !eventItem.severity) {
+            return true;
+        }
+
+        var allFiltersSelected = g_activeFilters.size === 5;
+
+        if (eventItem.severity === 'other') {
+            return allFiltersSelected;
+        }
+
+        if (allFiltersSelected) {
+            return true;
+        }
+
+        return g_activeFilters.has(eventItem.severity);
+    };
+
+    var buildFilterSearchPattern = function () {
+        if (g_activeFilters.size === 5) {
+            return null;
+        }
+
+        var levelTokens = [];
+        if (g_activeFilters.has('error')) {
+            levelTokens.push('ERROR', 'FATAL', 'SEVERE');
+        }
+        if (g_activeFilters.has('warn')) {
+            levelTokens.push('WARN', 'WARNING');
+        }
+        if (g_activeFilters.has('info')) {
+            levelTokens.push('INFO');
+        }
+        if (g_activeFilters.has('debug')) {
+            levelTokens.push('DEBUG');
+        }
+        if (g_activeFilters.has('trace')) {
+            levelTokens.push('TRACE');
+        }
+
+        if (levelTokens.length === 0) {
+            return null;
+        }
+
+        return '(^|\\W)(' + levelTokens.join('|') + ')(\\W|$)';
+    };
+
+    var isSelectiveFilterActive = function () {
+        return g_activeFilters.size < 5;
+    };
+
+    var jumpToFilteredMatch = function (direction) {
+        var searchPattern = buildFilterSearchPattern();
+        if (!searchPattern) {
+            return;
+        }
+
+        var fromPos = 0;
+        var searchAction = direction === 'backward' ? 'searchBackward' : 'searchForward';
+        if (g_currentLines.length > 0) {
+            if (direction === 'backward') {
+                fromPos = g_currentLines[0].start - 1;
+            } else {
+                fromPos = g_currentLines[g_currentLines.length - 1].end + 1;
+            }
+        }
+
+        fetchFilteredWindow(searchPattern, fromPos, searchAction, false);
+    };
+
+    var fetchFilteredWindow = function (searchPattern, fromPos, searchAction, retriedFromBoundary) {
+        $loadingCursor.css('visibility', 'visible');
+        $.ajax({
+            url: svcUrl,
+            method: "POST",
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            data: {
+                lineCount: g_linesHeight,
+                from: fromPos,
+                action: searchAction,
+                search: searchPattern,
+                regex: true,
+                matchCase: false
+            }
+        }).done(function (resp) {
+            $loadingCursor.css('visibility', 'hidden');
+
+            if (!resp || !resp.lines || resp.lines.length === 0) {
+                if (!retriedFromBoundary) {
+                    var retryFrom = searchAction === 'searchBackward' ? -1 : 0;
+                    fetchFilteredWindow(searchPattern, retryFrom, searchAction, true);
+                }
+                return;
+            }
+
+            g_currentLines = resp.lines || [];
+            rebuildGroupedState(g_currentLines);
+            var visibleCount = showLines(g_currentLines);
+            if (isSelectiveFilterActive()) {
+                fillFilteredViewport(visibleCount);
+            } else if (searchAction === 'searchBackward') {
+                setTimeout(removeTopOverflownRows, 0);
+            } else {
+                setTimeout(removeOverflownRows, 0);
+            }
+
+            var offset = resp.lines.length === 0 ? 0 : resp.lines[0].start;
+            var position = resp.size === 0 ? 0 : Math.round((offset / resp.size) * 1000);
+            $('#position-slider').val(position);
+        }).fail(function () {
+            $loadingCursor.css('visibility', 'hidden');
+        });
+    };
+
+    var fillFilteredViewport = function (visibleCount) {
+        if (!isSelectiveFilterActive() || g_isFillingFilteredWindow) {
+            return;
+        }
+        if (visibleCount >= g_linesHeight || g_currentLines.length === 0) {
+            return;
+        }
+
+        g_isFillingFilteredWindow = true;
+
+        var attempts = 0;
+        var maxAttempts = 6;
+        var minVisibleRows = Math.max(1, g_linesHeight - 1);
+
+        var loadMore = function (currentVisibleCount) {
+            if (currentVisibleCount >= minVisibleRows || attempts >= maxAttempts || g_currentLines.length === 0) {
+                g_isFillingFilteredWindow = false;
+                return;
+            }
+
+            attempts += 1;
+            var lastLine = g_currentLines[g_currentLines.length - 1];
+            var fromPos = lastLine && lastLine.end !== undefined ? (lastLine.end + 1) : 0;
+
+            $.ajax({
+                url: svcUrl,
+                method: "POST",
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                data: {
+                    lineCount: g_linesHeight,
+                    from: fromPos,
+                    action: 'forward'
+                }
+            }).done(function (resp) {
+                if (!resp || !resp.lines || resp.lines.length === 0) {
+                    g_isFillingFilteredWindow = false;
+                    return;
+                }
+
+                g_currentLines = g_currentLines.concat(resp.lines);
+                if (g_currentLines.length > g_linesHeight * 20) {
+                    g_currentLines = g_currentLines.slice(g_currentLines.length - (g_linesHeight * 20));
+                }
+                rebuildGroupedState(g_currentLines);
+                var renderedCount = showLines(g_currentLines);
+
+                loadMore(renderedCount);
+            }).fail(function () {
+                g_isFillingFilteredWindow = false;
+            });
+        };
+
+        loadMore(visibleCount);
     };
 
     var rebuildGroupedState = function (lines) {
@@ -792,8 +1034,12 @@
             g_currentLines.splice(0, g_currentLines.length - g_linesHeight);
         }
         rebuildGroupedState(g_currentLines);
-        showLines(g_currentLines);
-        setTimeout(removeTopOverflownRows, 0);
+        var visibleCount = showLines(g_currentLines);
+        if (isSelectiveFilterActive()) {
+            fillFilteredViewport(visibleCount);
+        } else {
+            setTimeout(removeTopOverflownRows, 0);
+        }
     };
 
     var getWebSocketUrl = function (path, lineCount) {
