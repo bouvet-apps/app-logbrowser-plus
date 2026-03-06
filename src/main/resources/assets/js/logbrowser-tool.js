@@ -457,31 +457,53 @@
     };
 
     var showLines = function (lines) {
-        var lineEl, i, linesEl = [], l = lines.length, lineText, p, part, lineClasses, levelClass;
+        var linesEl = [];
+        var events = g_groupedEvents && g_groupedEvents.length ? g_groupedEvents : groupLines(lines || []);
         var searchExpr = g_searchRegex ? g_searchText : escapeRegExp(g_searchText);
         var searchRegexp = new RegExp('(' + searchExpr + ')', g_searchMatchCase ? 'g' : 'gi');
-        for (i = 0; i < l; i++) {
-            lineText = lines[i].value;
-            levelClass = getLogLevelClass(lineText);
-            lineClasses = 'lb-logline' + (levelClass ? (' ' + levelClass) : '');
-            if (g_searchText) {
-                var parts = lineText.split(searchRegexp);
+        var eventIdx, lineIdx, eventItem, rowIndex, rowLine, rowText, lineEl, lineParts, part, p, lineClasses, levelClass;
 
-                var lineParts = [];
-                for (p = 0; p < parts.length; p++) {
-                    part = parts[p];
-                    if (searchRegexp.test(part)) {
-                        lineParts.push($('<mark>').text(part));
-                    } else {
-                        lineParts.push(document.createTextNode(part));
-                    }
+        for (eventIdx = 0; eventIdx < events.length; eventIdx++) {
+            eventItem = events[eventIdx];
+            levelClass = getSeverityClass(eventItem.severity);
+
+            for (lineIdx = 0; lineIdx < eventItem.indices.length; lineIdx++) {
+                rowIndex = eventItem.indices[lineIdx];
+                rowLine = lines[rowIndex];
+                if (!rowLine) {
+                    continue;
                 }
-                lineEl = $('<span/>').addClass(lineClasses).append(lineParts);
-            } else {
-                lineEl = $('<span/>').addClass(lineClasses).text(lineText);
+
+                rowText = rowLine.value;
+                lineClasses = 'lb-logline ' + (lineIdx === 0 ? 'lb-event-header' : 'lb-event-line') + (levelClass ? (' ' + levelClass) : '');
+
+                if (g_searchText) {
+                    lineParts = [];
+                    var parts = rowText.split(searchRegexp);
+
+                    for (p = 0; p < parts.length; p++) {
+                        part = parts[p];
+                        if (searchRegexp.test(part)) {
+                            lineParts.push($('<mark>').text(part));
+                        } else {
+                            lineParts.push(document.createTextNode(part));
+                        }
+                    }
+
+                    lineEl = $('<span/>').addClass(lineClasses).append(lineParts);
+                } else {
+                    lineEl = $('<span/>').addClass(lineClasses).text(rowText);
+                }
+
+                lineEl.attr('data-event-id', eventItem.eventId);
+                lineEl.attr('data-event-index', eventIdx);
+                lineEl.attr('data-line-index', lineIdx);
+                lineEl.attr('data-severity', eventItem.severity || 'other');
+
+                linesEl.push(lineEl);
             }
-            linesEl.push(lineEl);
         }
+
         $lbScreen.empty().append(linesEl);
     };
 
@@ -492,21 +514,29 @@
     };
 
     var parseLevel = function (lineText) {
-        var upperLine = (lineText || '').toUpperCase();
-
-        if (/(^|\W)(ERROR|FATAL|SEVERE)(\W|$)/.test(upperLine)) {
-            return 'error';
+        var text = lineText || '';
+        var match = text.match(/(^|\W)(ERROR|FATAL|SEVERE|WARN|WARNING|INFO|DEBUG|TRACE)(\W|$)/);
+        if (!match || !match[2]) {
+            if (/^[A-Za-z0-9_.$]+(?:Exception|Error)(?::|\b)/.test(text)) {
+                return 'error';
+            }
+            return 'other';
         }
-        if (/(^|\W)(WARN|WARNING)(\W|$)/.test(upperLine)) {
+
+        var token = match[2];
+        if (token === 'WARN' || token === 'WARNING') {
             return 'warn';
         }
-        if (/(^|\W)(INFO)(\W|$)/.test(upperLine)) {
+        if (token === 'ERROR' || token === 'FATAL' || token === 'SEVERE') {
+            return 'error';
+        }
+        if (token === 'INFO') {
             return 'info';
         }
-        if (/(^|\W)(DEBUG)(\W|$)/.test(upperLine)) {
+        if (token === 'DEBUG') {
             return 'debug';
         }
-        if (/(^|\W)(TRACE)(\W|$)/.test(upperLine)) {
+        if (token === 'TRACE') {
             return 'trace';
         }
 
@@ -518,7 +548,7 @@
             return false;
         }
 
-        if (/^\s+at\s+/.test(lineText) || /^\s*Caused by:/.test(lineText)) {
+        if (isContinuationLine(lineText)) {
             return false;
         }
 
@@ -529,32 +559,41 @@
         return parseLevel(lineText) !== 'other';
     };
 
+    var isContinuationLine = function (lineText) {
+        if (!lineText) {
+            return false;
+        }
+
+        return /^\s+at\s+/.test(lineText) ||
+            /^\s*Caused by:/.test(lineText) ||
+            /^\s*\.\.\.\s+\d+\s+more/.test(lineText);
+    };
+
     var groupLines = function (lines) {
         var grouped = [];
         var currentEvent = null;
-        var i, line, lineText, level;
+        var i, line, lineText;
 
         for (i = 0; i < lines.length; i++) {
             line = lines[i];
             lineText = line && line.value ? line.value : '';
 
             if (!currentEvent || isEventStart(lineText)) {
+                var eventId = (line && line.start !== undefined ? line.start : i) + ':' + (line && line.end !== undefined ? line.end : i);
+                var severity = parseLevel(lineText);
+                if (!currentEvent && severity === 'other' && isContinuationLine(lineText)) {
+                    severity = 'error';
+                }
                 currentEvent = {
-                    eventId: (line && line.start !== undefined ? line.start : i) + ':' + (line && line.end !== undefined ? line.end : i),
+                    eventId: eventId,
                     headerIdx: i,
                     indices: [i],
-                    severity: parseLevel(lineText),
-                    isCollapsed: false
+                    severity: severity,
+                    isCollapsed: g_collapsedEvents.get(eventId) === true
                 };
                 grouped.push(currentEvent);
             } else {
                 currentEvent.indices.push(i);
-                if (currentEvent.severity === 'other') {
-                    level = parseLevel(lineText);
-                    if (level !== 'other') {
-                        currentEvent.severity = level;
-                    }
-                }
             }
         }
 
@@ -583,6 +622,26 @@
         }
 
         return counts;
+    };
+
+    var getSeverityClass = function (severity) {
+        if (severity === 'error') {
+            return 'lb-logline-error';
+        }
+        if (severity === 'warn') {
+            return 'lb-logline-warn';
+        }
+        if (severity === 'info') {
+            return 'lb-logline-info';
+        }
+        if (severity === 'debug') {
+            return 'lb-logline-debug';
+        }
+        if (severity === 'trace') {
+            return 'lb-logline-trace';
+        }
+
+        return '';
     };
 
     var updateSidebarCounts = function () {
@@ -625,28 +684,6 @@
             updateSidebarCounts();
         }).fail(function () {
         });
-    };
-
-    var getLogLevelClass = function (lineText) {
-        var level = parseLevel(lineText);
-
-        if (level === 'error') {
-            return 'lb-logline-error';
-        }
-        if (level === 'warn') {
-            return 'lb-logline-warn';
-        }
-        if (level === 'info') {
-            return 'lb-logline-info';
-        }
-        if (level === 'debug') {
-            return 'lb-logline-debug';
-        }
-        if (level === 'trace') {
-            return 'lb-logline-trace';
-        }
-
-        return '';
     };
 
     var debounce = function (func, wait, immediate) {

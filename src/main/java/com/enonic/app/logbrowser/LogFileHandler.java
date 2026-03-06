@@ -12,6 +12,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -21,15 +22,9 @@ import com.enonic.xp.script.bean.ScriptBean;
 public class LogFileHandler
     implements ScriptBean
 {
-    private static final Pattern ERROR_PATTERN = Pattern.compile( "(^|\\W)(ERROR|FATAL|SEVERE)(\\W|$)" );
+    private static final Pattern LEVEL_PATTERN = Pattern.compile( "(^|\\W)(ERROR|FATAL|SEVERE|WARN|WARNING|INFO|DEBUG|TRACE)(\\W|$)" );
 
-    private static final Pattern WARN_PATTERN = Pattern.compile( "(^|\\W)(WARN|WARNING)(\\W|$)" );
-
-    private static final Pattern INFO_PATTERN = Pattern.compile( "(^|\\W)(INFO)(\\W|$)" );
-
-    private static final Pattern DEBUG_PATTERN = Pattern.compile( "(^|\\W)(DEBUG)(\\W|$)" );
-
-    private static final Pattern TRACE_PATTERN = Pattern.compile( "(^|\\W)(TRACE)(\\W|$)" );
+    private static final Pattern EXCEPTION_HEADER_PATTERN = Pattern.compile( "^[A-Za-z0-9_.$]+(?:Exception|Error)(?::|\\b)" );
 
     private static int CR = 0xD;
 
@@ -492,25 +487,35 @@ public class LogFileHandler
 
     private String parseLevel( final String line )
     {
-        final String upperLine = line == null ? "" : line.toUpperCase();
-
-        if ( ERROR_PATTERN.matcher( upperLine ).find() )
+        final String text = line == null ? "" : line;
+        final Matcher matcher = LEVEL_PATTERN.matcher( text );
+        if ( !matcher.find() )
         {
-            return "error";
+            if ( EXCEPTION_HEADER_PATTERN.matcher( text ).find() )
+            {
+                return "error";
+            }
+            return "other";
         }
-        if ( WARN_PATTERN.matcher( upperLine ).find() )
+
+        final String token = matcher.group( 2 );
+        if ( "WARN".equals( token ) || "WARNING".equals( token ) )
         {
             return "warn";
         }
-        if ( INFO_PATTERN.matcher( upperLine ).find() )
+        if ( "ERROR".equals( token ) || "FATAL".equals( token ) || "SEVERE".equals( token ) )
+        {
+            return "error";
+        }
+        if ( "INFO".equals( token ) )
         {
             return "info";
         }
-        if ( DEBUG_PATTERN.matcher( upperLine ).find() )
+        if ( "DEBUG".equals( token ) )
         {
             return "debug";
         }
-        if ( TRACE_PATTERN.matcher( upperLine ).find() )
+        if ( "TRACE".equals( token ) )
         {
             return "trace";
         }

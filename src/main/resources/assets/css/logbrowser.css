@@ -118,6 +118,15 @@ body > .lb-main-container {
     transition: filter 120ms ease, background-color 120ms ease;
 }
 
+.lb-logline.lb-event-header {
+    font-weight: 600;
+}
+
+.lb-logline.lb-event-line {
+    padding-left: 16px;
+    opacity: 0.95;
+}
+
 .lb-logline.lb-logline-error {
     color: #E09690;
 }
