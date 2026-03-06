@@ -12,8 +12,24 @@ var handlePost = function (req) {
         return getLines(req, action);
     }
 
+    if (action === 'stats') {
+        return getStats();
+    }
+
     return {
         status: 400
+    };
+};
+
+var getStats = function () {
+    var counts = logFileLib.getStats();
+
+    return {
+        contentType: 'application/json',
+        body: {
+            success: true,
+            counts: counts
+        }
     };
 };
 

@@ -20,6 +20,8 @@
         trace: 0,
         other: 0
     };
+    var g_globalEventCounts = null;
+    var g_lastStatsFetchAt = 0;
 
     $(function () {
         $lbScreen = $('.lb-screen');
@@ -37,6 +39,7 @@
         );
 
         fetchLines(g_linesHeight, 0, 'forward');
+        fetchGlobalStats(true);
         $('#upBut').on('click', pageUpClick);
         $('#downBut').on('click', pageDownClick);
         $('#startBut,#startMobBut').on('click', startClick);
@@ -372,6 +375,7 @@
         $('#position-slider').val(1000).css('visibility', 'hidden');
         $('#startBut,#upBut,#downBut,#endBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', true);
         g_currentLines = [];
+        rebuildGroupedState(g_currentLines);
 
         wsConnect();
     };
@@ -430,6 +434,7 @@
             }
 
             g_currentLines = resp.lines || [];
+            rebuildGroupedState(g_currentLines);
             showLines(g_currentLines);
             if (action === 'end') {
                 setTimeout(removeTopOverflownRows, 0);
@@ -440,6 +445,8 @@
             var offset = resp.lines.length === 0 ? 0 : resp.lines[0].start;
             var position = resp.size === 0 ? 0 : Math.round((offset / resp.size) * 1000);
             $('#position-slider').val(position);
+
+            fetchGlobalStats(false);
 
         }).fail(function (xhr, textStatus) {
             $loadingCursor.css('visibility', 'hidden');
@@ -478,22 +485,164 @@
         $lbScreen.empty().append(linesEl);
     };
 
-    var getLogLevelClass = function (lineText) {
+    var rebuildGroupedState = function (lines) {
+        g_groupedEvents = groupLines(lines || []);
+        g_eventCounts = buildEventCounts(g_groupedEvents);
+        updateSidebarCounts();
+    };
+
+    var parseLevel = function (lineText) {
         var upperLine = (lineText || '').toUpperCase();
 
         if (/(^|\W)(ERROR|FATAL|SEVERE)(\W|$)/.test(upperLine)) {
-            return 'lb-logline-error';
+            return 'error';
         }
         if (/(^|\W)(WARN|WARNING)(\W|$)/.test(upperLine)) {
-            return 'lb-logline-warn';
+            return 'warn';
         }
         if (/(^|\W)(INFO)(\W|$)/.test(upperLine)) {
-            return 'lb-logline-info';
+            return 'info';
         }
         if (/(^|\W)(DEBUG)(\W|$)/.test(upperLine)) {
-            return 'lb-logline-debug';
+            return 'debug';
         }
         if (/(^|\W)(TRACE)(\W|$)/.test(upperLine)) {
+            return 'trace';
+        }
+
+        return 'other';
+    };
+
+    var isEventStart = function (lineText) {
+        if (!lineText) {
+            return false;
+        }
+
+        if (/^\s+at\s+/.test(lineText) || /^\s*Caused by:/.test(lineText)) {
+            return false;
+        }
+
+        if (/^\d{4}[-\/]\d{2}[-\/]\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(lineText)) {
+            return true;
+        }
+
+        return parseLevel(lineText) !== 'other';
+    };
+
+    var groupLines = function (lines) {
+        var grouped = [];
+        var currentEvent = null;
+        var i, line, lineText, level;
+
+        for (i = 0; i < lines.length; i++) {
+            line = lines[i];
+            lineText = line && line.value ? line.value : '';
+
+            if (!currentEvent || isEventStart(lineText)) {
+                currentEvent = {
+                    eventId: (line && line.start !== undefined ? line.start : i) + ':' + (line && line.end !== undefined ? line.end : i),
+                    headerIdx: i,
+                    indices: [i],
+                    severity: parseLevel(lineText),
+                    isCollapsed: false
+                };
+                grouped.push(currentEvent);
+            } else {
+                currentEvent.indices.push(i);
+                if (currentEvent.severity === 'other') {
+                    level = parseLevel(lineText);
+                    if (level !== 'other') {
+                        currentEvent.severity = level;
+                    }
+                }
+            }
+        }
+
+        return grouped;
+    };
+
+    var buildEventCounts = function (events) {
+        var counts = {
+            total: events.length,
+            error: 0,
+            warn: 0,
+            info: 0,
+            debug: 0,
+            trace: 0,
+            other: 0
+        };
+        var i, severity;
+
+        for (i = 0; i < events.length; i++) {
+            severity = events[i].severity || 'other';
+            if (counts[severity] === undefined) {
+                counts.other += 1;
+            } else {
+                counts[severity] += 1;
+            }
+        }
+
+        return counts;
+    };
+
+    var updateSidebarCounts = function () {
+        var sourceCounts = g_globalEventCounts || g_eventCounts;
+        $('[data-count-type="total"]').text(sourceCounts.total || 0);
+        $('[data-count-type="error"]').text(sourceCounts.error || 0);
+        $('[data-count-type="warn"]').text(sourceCounts.warn || 0);
+        $('[data-count-type="info"]').text(sourceCounts.info || 0);
+        $('[data-count-type="debug"]').text(sourceCounts.debug || 0);
+        $('[data-count-type="trace"]').text(sourceCounts.trace || 0);
+    };
+
+    var fetchGlobalStats = function (force) {
+        var now = Date.now();
+        if (!force && now - g_lastStatsFetchAt < 5000) {
+            return;
+        }
+        g_lastStatsFetchAt = now;
+
+        $.ajax({
+            url: svcUrl,
+            method: "POST",
+            contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+            data: {
+                action: 'stats'
+            }
+        }).done(function (resp) {
+            if (!resp || !resp.success || !resp.counts) {
+                return;
+            }
+            g_globalEventCounts = {
+                total: resp.counts.total || 0,
+                error: resp.counts.error || 0,
+                warn: resp.counts.warn || 0,
+                info: resp.counts.info || 0,
+                debug: resp.counts.debug || 0,
+                trace: resp.counts.trace || 0,
+                other: resp.counts.other || 0
+            };
+            updateSidebarCounts();
+        }).fail(function () {
+        });
+    };
+
+    var getLogLevelClass = function (lineText) {
+        var level = parseLevel(lineText);
+
+        if (level === 'error') {
+            return 'lb-logline-error';
+        }
+        if (level === 'warn') {
+            return 'lb-logline-warn';
+        }
+        if (level === 'info') {
+            return 'lb-logline-info';
+        }
+        if (level === 'debug') {
+            return 'lb-logline-debug';
+        }
+        if (level === 'trace') {
             return 'lb-logline-trace';
         }
 
@@ -536,6 +685,7 @@
             // rows[r].remove();
             g_currentLines.pop();
         }
+        rebuildGroupedState(g_currentLines);
     };
 
     var removeTopOverflownRows = function () {
@@ -558,6 +708,7 @@
             rows[r].remove();
             g_currentLines.splice(r, 1);
         }
+        rebuildGroupedState(g_currentLines);
     };
 
     // WS - EVENTS
@@ -601,8 +752,9 @@
 
         g_currentLines = g_currentLines.concat(resp.lines);
         if (g_currentLines.length > g_linesHeight) {
-            g_currentLines.splice(0, g_linesHeight - g_currentLines.length);
+            g_currentLines.splice(0, g_currentLines.length - g_linesHeight);
         }
+        rebuildGroupedState(g_currentLines);
         showLines(g_currentLines);
         setTimeout(removeTopOverflownRows, 0);
     };

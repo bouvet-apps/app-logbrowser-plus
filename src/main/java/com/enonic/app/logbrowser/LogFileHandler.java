@@ -2,13 +2,16 @@ package com.enonic.app.logbrowser;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.BufferedReader;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -18,6 +21,16 @@ import com.enonic.xp.script.bean.ScriptBean;
 public class LogFileHandler
     implements ScriptBean
 {
+    private static final Pattern ERROR_PATTERN = Pattern.compile( "(^|\\W)(ERROR|FATAL|SEVERE)(\\W|$)" );
+
+    private static final Pattern WARN_PATTERN = Pattern.compile( "(^|\\W)(WARN|WARNING)(\\W|$)" );
+
+    private static final Pattern INFO_PATTERN = Pattern.compile( "(^|\\W)(INFO)(\\W|$)" );
+
+    private static final Pattern DEBUG_PATTERN = Pattern.compile( "(^|\\W)(DEBUG)(\\W|$)" );
+
+    private static final Pattern TRACE_PATTERN = Pattern.compile( "(^|\\W)(TRACE)(\\W|$)" );
+
     private static int CR = 0xD;
 
     private static int LF = 0xA;
@@ -74,6 +87,38 @@ public class LogFileHandler
     public String getLogPath()
     {
         return LogHelper.getLogPath().toString();
+    }
+
+    public Map<String, Long> getStats()
+        throws IOException
+    {
+        final Path logPath = LogHelper.getLogPath();
+        final Map<String, Long> counts = new LinkedHashMap<>();
+        counts.put( "total", 0L );
+        counts.put( "error", 0L );
+        counts.put( "warn", 0L );
+        counts.put( "info", 0L );
+        counts.put( "debug", 0L );
+        counts.put( "trace", 0L );
+        counts.put( "other", 0L );
+
+        if ( !Files.exists( logPath ) )
+        {
+            return counts;
+        }
+
+        try (final BufferedReader reader = Files.newBufferedReader( logPath, StandardCharsets.UTF_8 ))
+        {
+            String line;
+            while ( ( line = reader.readLine() ) != null )
+            {
+                counts.put( "total", counts.get( "total" ) + 1 );
+                final String level = parseLevel( line );
+                counts.put( level, counts.get( level ) + 1 );
+            }
+        }
+
+        return counts;
     }
 
     private LogContext readLog()
@@ -443,6 +488,34 @@ public class LogFileHandler
             j--;
             i++;
         }
+    }
+
+    private String parseLevel( final String line )
+    {
+        final String upperLine = line == null ? "" : line.toUpperCase();
+
+        if ( ERROR_PATTERN.matcher( upperLine ).find() )
+        {
+            return "error";
+        }
+        if ( WARN_PATTERN.matcher( upperLine ).find() )
+        {
+            return "warn";
+        }
+        if ( INFO_PATTERN.matcher( upperLine ).find() )
+        {
+            return "info";
+        }
+        if ( DEBUG_PATTERN.matcher( upperLine ).find() )
+        {
+            return "debug";
+        }
+        if ( TRACE_PATTERN.matcher( upperLine ).find() )
+        {
+            return "trace";
+        }
+
+        return "other";
     }
 
     @Override
