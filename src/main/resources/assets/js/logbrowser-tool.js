@@ -584,7 +584,12 @@
                     }
                 }
 
-                if (g_searchText) {
+                // For event headers, parse and style timestamp/level separately
+                if (lineIdx === 0) {
+                    var headerParts = formatHeaderLine(rowText, g_searchText, g_searchMatchCase, g_searchRegex);
+                    lineEl = $('<span/>').addClass(lineClasses).append(headerParts);
+                } else if (g_searchText) {
+                    // For body lines with search, use search highlighting
                     lineParts = [];
                     var parts = rowText.split(searchRegexp);
 
@@ -1237,6 +1242,52 @@
 
     var escapeRegExp = function (str) {
         return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    };
+
+    var formatHeaderLine = function (text, searchText, searchMatchCase, searchRegex) {
+        // Parse typical log format: [▶/▼] TIMESTAMP LEVEL [LOGGER] MESSAGE
+        // Returns array of DOM elements for collapse indicator, timestamp, level, and message parts
+        var parts = [];
+        var remaining = text;
+
+        // Strip optional collapse indicator (▶ or ▼)
+        var collapseMatch = remaining.match(/^([▶▼]\s)/);
+        if (collapseMatch) {
+            parts.push(document.createTextNode(collapseMatch[1]));
+            remaining = remaining.substring(collapseMatch[0].length);
+        }
+
+        // Match time-only (00:03:00.246) or full date-time (2024-03-09 12:30:45.123 or 2024-03-09T12:30:45.123)
+        var timestampMatch = remaining.match(/^(\d{2}:\d{2}:\d{2}(?:[.,]\d{1,3})?)(\s+)/) ||
+            remaining.match(/^(\d{4}[-\/]\d{2}[-\/]\d{2}[T\s]\d{2}:\d{2}:\d{2}(?:[.,]\d{1,3})?)(\s+)/);
+        if (timestampMatch) {
+            parts.push($('<span class="lb-timestamp">').text(timestampMatch[1] + timestampMatch[2]));
+            remaining = remaining.substring(timestampMatch[0].length);
+        }
+
+        var levelMatch = remaining.match(/^(\s*\[?(ERROR|FATAL|SEVERE|WARN|WARNING|INFO|DEBUG|TRACE)\]?\s+)/);
+        if (levelMatch) {
+            parts.push($('<span class="lb-level">').text(levelMatch[1]));
+            remaining = remaining.substring(levelMatch[0].length);
+        }
+
+        if (searchText) {
+            var searchExpr = searchRegex ? searchText : escapeRegExp(searchText);
+            var searchRegexp = new RegExp('(' + searchExpr + ')', searchMatchCase ? 'g' : 'gi');
+            var searchParts = remaining.split(searchRegexp);
+            for (var p = 0; p < searchParts.length; p++) {
+                var part = searchParts[p];
+                if (searchRegexp.test(part)) {
+                    parts.push($('<mark>').text(part));
+                } else {
+                    parts.push(document.createTextNode(part));
+                }
+            }
+        } else {
+            parts.push(document.createTextNode(remaining));
+        }
+
+        return parts;
     };
 
 }($, SVC_URL));
