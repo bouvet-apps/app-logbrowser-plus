@@ -10,7 +10,8 @@
     // State model for filtering and grouping
     var g_activeFilters = new Set(['error', 'warn', 'info', 'debug', 'trace']); // Active severity levels: 'error', 'warn', 'info', 'debug', 'trace'
     var g_groupedEvents = []; // Array of event objects: { headerIdx, indices[], severity, isCollapsed, eventId }
-    var g_collapsedEvents = new Map(); // Map of eventId -> isCollapsed (true/false)
+    var g_collapseAll = false; // Global collapse flag: when true, all multi-line events are collapsed by default
+    var g_collapsedEvents = new Map(); // Per-event exceptions to g_collapseAll (eventId -> isCollapsed)
     var g_eventCounts = {  // Counts by level
         total: 0,
         error: 0,
@@ -42,6 +43,8 @@
         fetchLines(g_linesHeight, 0, 'forward');
         fetchGlobalStats(true);
         bindFilterChips();
+        bindCollapseControls();
+        bindEventHeaderToggle();
         updateFilterChipUi();
         $('#upBut').on('click', pageUpClick);
         $('#downBut').on('click', pageDownClick);
@@ -266,6 +269,9 @@
         g_searchRegex = $('#searchRegex').is(':checked');
         g_searchMatchCase = $('#searchMatchCase').is(':checked');
 
+        // Expand any collapsed events containing the search match so it's visible
+        expandEventsMatchingSearch();
+
         showLines(g_currentLines);
 
         var firstLine, fromPos;
@@ -287,6 +293,41 @@
         }
 
         fetchLines(g_linesHeight, fromPos, g_searchForward ? 'searchForward' : 'searchBackward', g_searchText);
+    };
+
+    var expandEventsMatchingSearch = function () {
+        if (!g_searchText || g_groupedEvents.length === 0) {
+            return;
+        }
+
+        var searchExpr = g_searchRegex ? g_searchText : escapeRegExp(g_searchText);
+        var flags = g_searchMatchCase ? '' : 'i';
+        var re;
+        try {
+            re = new RegExp(searchExpr, flags);
+        } catch (e) {
+            return;
+        }
+
+        var i, j, eventItem, line;
+        for (i = 0; i < g_groupedEvents.length; i++) {
+            eventItem = g_groupedEvents[i];
+            if (!eventItem.isCollapsed || eventItem.indices.length <= 1) {
+                continue;
+            }
+            for (j = 0; j < eventItem.indices.length; j++) {
+                line = g_currentLines[eventItem.indices[j]];
+                if (line && line.value && re.test(line.value)) {
+                    eventItem.isCollapsed = false;
+                    if (g_collapseAll) {
+                        g_collapsedEvents.set(eventItem.eventId, false);
+                    } else {
+                        g_collapsedEvents.delete(eventItem.eventId);
+                    }
+                    break;
+                }
+            }
+        }
     };
 
     var previousPage = function () {
@@ -397,6 +438,7 @@
         $lbScreen.toggleClass('lb-following', true).empty();
         $('#position-slider').val(1000).css('visibility', 'hidden');
         $('#startBut,#upBut,#downBut,#endBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', true);
+        $('.lb-sidebar').addClass('lb-sidebar-following');
         g_currentLines = [];
         rebuildGroupedState(g_currentLines);
 
@@ -412,8 +454,13 @@
         $lbScreen.toggleClass('lb-following', false);
         $('#position-slider').val(1000).css('visibility', 'visible');
         $('#startBut,#upBut,#downBut,#endBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', false);
+        $('.lb-sidebar').removeClass('lb-sidebar-following');
 
         wsDisconnect();
+
+        // Refresh: load the last page and update stats
+        fetchLines(g_linesHeight, -1, 'end');
+        fetchGlobalStats(true);
     };
 
     var isTopPosition = function () {
@@ -458,6 +505,11 @@
 
             g_currentLines = resp.lines || [];
             rebuildGroupedState(g_currentLines);
+
+            if (g_searchText && (action === 'searchForward' || action === 'searchBackward')) {
+                expandEventsMatchingSearch();
+            }
+
             var visibleCount = showLines(g_currentLines);
 
             if (visibleCount === 0 && isSelectiveFilterActive() && action !== 'searchForward' && action !== 'searchBackward') {
@@ -471,6 +523,8 @@
 
             if (isSelectiveFilterActive()) {
                 fillFilteredViewport(visibleCount);
+            } else if (g_collapseAll) {
+                fillCollapsedViewport(visibleCount);
             } else if (action === 'end') {
                 setTimeout(removeTopOverflownRows, 0);
             } else {
@@ -504,8 +558,13 @@
                 continue;
             }
             levelClass = getSeverityClass(eventItem.severity);
+            var collapsedLinesCount = Math.max(0, eventItem.indices.length - 1);
 
             for (lineIdx = 0; lineIdx < eventItem.indices.length; lineIdx++) {
+                if (eventItem.isCollapsed && lineIdx > 0) {
+                    continue;
+                }
+
                 rowIndex = eventItem.indices[lineIdx];
                 rowLine = lines[rowIndex];
                 if (!rowLine) {
@@ -514,6 +573,16 @@
 
                 rowText = rowLine.value;
                 lineClasses = 'lb-logline ' + (lineIdx === 0 ? 'lb-event-header' : 'lb-event-line') + (levelClass ? (' ' + levelClass) : '');
+                if (lineIdx === 0 && eventItem.isCollapsed) {
+                    lineClasses += ' lb-event-collapsed';
+                }
+
+                if (lineIdx === 0 && collapsedLinesCount > 0) {
+                    rowText = (eventItem.isCollapsed ? '▶ ' : '▼ ') + rowText;
+                    if (eventItem.isCollapsed) {
+                        rowText += '  (+' + collapsedLinesCount + ' lines)';
+                    }
+                }
 
                 if (g_searchText) {
                     lineParts = [];
@@ -546,6 +615,114 @@
         return linesEl.length;
     };
 
+    var bindCollapseControls = function () {
+        $('#collapseAllBut').on('click', function () {
+            g_collapseAll = true;
+            g_collapsedEvents.clear();
+            rebuildGroupedState(g_currentLines);
+            var visibleCount = showLines(g_currentLines);
+            fillCollapsedViewport(visibleCount);
+        });
+
+        $('#expandAllBut').on('click', function () {
+            g_collapseAll = false;
+            g_collapsedEvents.clear();
+            rebuildGroupedState(g_currentLines);
+            showLines(g_currentLines);
+        });
+    };
+
+    var bindEventHeaderToggle = function () {
+        $lbScreen.on('click', '.lb-event-header', function () {
+            var eventId = $(this).attr('data-event-id');
+            if (!eventId) {
+                return;
+            }
+
+            var i, eventItem;
+            for (i = 0; i < g_groupedEvents.length; i++) {
+                if (g_groupedEvents[i].eventId === eventId) {
+                    eventItem = g_groupedEvents[i];
+                    break;
+                }
+            }
+            if (!eventItem) {
+                return;
+            }
+
+            var newCollapsed = !eventItem.isCollapsed;
+            // Store as exception only if it differs from the global default
+            if (newCollapsed !== g_collapseAll) {
+                g_collapsedEvents.set(eventId, newCollapsed);
+            } else {
+                g_collapsedEvents.delete(eventId);
+            }
+            eventItem.isCollapsed = newCollapsed;
+
+            var visibleCount = showLines(g_currentLines);
+            if (newCollapsed) {
+                fillCollapsedViewport(visibleCount);
+            }
+        });
+    };
+
+    var isCollapsedViewActive = function () {
+        return g_collapseAll || g_collapsedEvents.size > 0;
+    };
+
+    var fillCollapsedViewport = function (visibleCount) {
+        if (!g_collapseAll || g_isFillingFilteredWindow) {
+            return;
+        }
+        if (visibleCount >= g_linesHeight || g_currentLines.length === 0) {
+            return;
+        }
+
+        g_isFillingFilteredWindow = true;
+        var attempts = 0;
+        var maxAttempts = 6;
+        var minVisibleRows = Math.max(1, g_linesHeight - 1);
+
+        var loadMore = function (currentVisibleCount) {
+            if (currentVisibleCount >= minVisibleRows || attempts >= maxAttempts || g_currentLines.length === 0) {
+                g_isFillingFilteredWindow = false;
+                return;
+            }
+
+            attempts += 1;
+            var lastLine = g_currentLines[g_currentLines.length - 1];
+            var fromPos = lastLine && lastLine.end !== undefined ? (lastLine.end + 1) : 0;
+
+            $.ajax({
+                url: svcUrl,
+                method: 'POST',
+                contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                data: {
+                    lineCount: g_linesHeight,
+                    from: fromPos,
+                    action: 'forward'
+                }
+            }).done(function (resp) {
+                if (!resp || !resp.lines || resp.lines.length === 0) {
+                    g_isFillingFilteredWindow = false;
+                    return;
+                }
+
+                g_currentLines = g_currentLines.concat(resp.lines);
+                if (g_currentLines.length > g_linesHeight * 20) {
+                    g_currentLines = g_currentLines.slice(g_currentLines.length - (g_linesHeight * 20));
+                }
+                rebuildGroupedState(g_currentLines);
+                var renderedCount = showLines(g_currentLines);
+                loadMore(renderedCount);
+            }).fail(function () {
+                g_isFillingFilteredWindow = false;
+            });
+        };
+
+        loadMore(visibleCount);
+    };
+
     var bindFilterChips = function () {
         $('.lb-filter-chip').on('click', function () {
             var level = $(this).data('level');
@@ -569,6 +746,8 @@
                 jumpToFilteredMatch('forward');
             } else if (isSelectiveFilterActive()) {
                 fillFilteredViewport(visibleCount);
+            } else if (g_collapseAll) {
+                fillCollapsedViewport(visibleCount);
             }
         });
     };
@@ -680,6 +859,8 @@
             var visibleCount = showLines(g_currentLines);
             if (isSelectiveFilterActive()) {
                 fillFilteredViewport(visibleCount);
+            } else if (g_collapseAll) {
+                fillCollapsedViewport(visibleCount);
             } else if (searchAction === 'searchBackward') {
                 setTimeout(removeTopOverflownRows, 0);
             } else {
@@ -808,7 +989,8 @@
 
         return /^\s+at\s+/.test(lineText) ||
             /^\s*Caused by:/.test(lineText) ||
-            /^\s*\.\.\.\s+\d+\s+more/.test(lineText);
+            /^\s*\.\.\.\s+\d+\s+more/.test(lineText) ||
+            /^[A-Za-z0-9_.$]+(?:Exception|Error)(?::|\b)/.test(lineText);
     };
 
     var groupLines = function (lines) {
@@ -826,12 +1008,14 @@
                 if (!currentEvent && severity === 'other' && isContinuationLine(lineText)) {
                     severity = 'error';
                 }
+                var collapseException = g_collapsedEvents.get(eventId);
+                var isCollapsed = collapseException !== undefined ? collapseException : g_collapseAll;
                 currentEvent = {
                     eventId: eventId,
                     headerIdx: i,
                     indices: [i],
                     severity: severity,
-                    isCollapsed: g_collapsedEvents.get(eventId) === true
+                    isCollapsed: isCollapsed
                 };
                 grouped.push(currentEvent);
             } else {
@@ -1030,13 +1214,17 @@
         // console.log(resp);
 
         g_currentLines = g_currentLines.concat(resp.lines);
-        if (g_currentLines.length > g_linesHeight) {
-            g_currentLines.splice(0, g_currentLines.length - g_linesHeight);
+        // Keep more lines when collapsed/filtered since many are hidden
+        var maxBuffer = (g_collapseAll || isSelectiveFilterActive()) ? g_linesHeight * 10 : g_linesHeight;
+        if (g_currentLines.length > maxBuffer) {
+            g_currentLines.splice(0, g_currentLines.length - maxBuffer);
         }
         rebuildGroupedState(g_currentLines);
         var visibleCount = showLines(g_currentLines);
         if (isSelectiveFilterActive()) {
-            fillFilteredViewport(visibleCount);
+            // No async fill during follow — buffer is already larger
+        } else if (g_collapseAll) {
+            // No async fill during follow — buffer is already larger
         } else {
             setTimeout(removeTopOverflownRows, 0);
         }

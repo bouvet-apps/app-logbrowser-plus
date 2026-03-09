@@ -120,31 +120,61 @@ body > .lb-main-container {
 
 .lb-logline.lb-event-header {
     font-weight: 600;
+    cursor: pointer;
+    margin-top: 2px;
 }
 
 .lb-logline.lb-event-line {
-    padding-left: 16px;
-    opacity: 0.95;
+    padding-left: 20px;
+    opacity: 0.60;
+    cursor: default;
+    font-weight: 400;
+    border-left: 2px solid rgba(255, 255, 255, 0.08);
+    margin-left: 4px;
+}
+
+.lb-logline.lb-event-header.lb-event-collapsed {
+    opacity: 1;
 }
 
 .lb-logline.lb-logline-error {
     color: #E09690;
 }
+.lb-logline.lb-event-line.lb-logline-error {
+    color: #a87a76;
+    border-left-color: rgba(224, 150, 144, 0.25);
+}
 
 .lb-logline.lb-logline-warn {
     color: #CACA00;
+}
+.lb-logline.lb-event-line.lb-logline-warn {
+    color: #9a9a00;
+    border-left-color: rgba(202, 202, 0, 0.25);
 }
 
 .lb-logline.lb-logline-info {
     color: #9CD9F0;
 }
+.lb-logline.lb-event-line.lb-logline-info {
+    color: #7aafc2;
+    border-left-color: rgba(156, 217, 240, 0.25);
+}
 
 .lb-logline.lb-logline-debug {
     color: #22da26;
 }
+.lb-logline.lb-event-line.lb-logline-debug {
+    color: #1aa61d;
+    border-left-color: rgba(34, 218, 38, 0.25);
+}
 
 .lb-logline.lb-logline-trace {
     color: #719600;
+}
+.lb-logline.lb-event-line.lb-logline-trace {
+    color: #587400;
+    border-left-color: rgba(113, 150, 0, 0.25);
 }
 
 .lb-logline:hover {
@@ -331,6 +361,12 @@ body > .lb-main-container {
     display: flex;
     flex-direction: column;
     gap: 0;
+    transition: opacity 200ms ease;
+}
+
+.lb-sidebar.lb-sidebar-following {
+    opacity: 0.5;
+    pointer-events: none;
 }
 
 .lb-sidebar-section {
