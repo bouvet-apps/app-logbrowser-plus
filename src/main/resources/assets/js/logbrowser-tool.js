@@ -54,6 +54,20 @@
         $('#downBut').on('click', pageDownClick);
         $('#startBut,#startMobBut').on('click', startClick);
         $('#endBut,#endMobBut').on('click', endClick);
+        $('#prevErrorBut').on('click', function () {
+            if (g_following) {
+                return true;
+            }
+            $(this).blur();
+            jumpToError(false);
+        });
+        $('#nextErrorBut').on('click', function () {
+            if (g_following) {
+                return true;
+            }
+            $(this).blur();
+            jumpToError(true);
+        });
         $('#followBut').on('click', followClick);
         $('#stopFollowBut').on('click', stopFollowClick);
         $('#searchBut,#searchMobBut').on('click', searchClick);
@@ -289,6 +303,21 @@
         fetchLines(g_linesHeight, fromPos, g_searchForward ? 'searchForward' : 'searchBackward', g_searchText);
     };
 
+    // Jumps to the next/previous line containing the word ERROR, reusing the
+    // existing regex-search backend directly rather than the search modal's own
+    // g_searchText/g_searchRegex state (so it doesn't interfere with a search the
+    // user might have open).
+    var jumpToError = function (forward) {
+        var firstLine, fromPos;
+        if (g_currentLines.length === 0) {
+            fromPos = 0;
+        } else {
+            firstLine = g_currentLines[0];
+            fromPos = forward ? firstLine.end + 1 : firstLine.start - 1;
+        }
+        fetchLines(g_linesHeight, fromPos, forward ? 'searchForward' : 'searchBackward', '\\bERROR\\b', true, true);
+    };
+
     var previousPage = function () {
         if (isTopPosition()) {
             return;
@@ -376,7 +405,7 @@
         $loadingCursor.css('visibility', 'visible');
         $lbScreen.toggleClass('lb-following', true).empty();
         $('#position-slider').val(1000).css('visibility', 'hidden');
-        $('#startBut,#upBut,#downBut,#endBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', true);
+        $('#startBut,#upBut,#downBut,#endBut,#prevErrorBut,#nextErrorBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', true);
         g_currentLines = [];
 
         wsConnect();
@@ -390,7 +419,7 @@
         $loadingCursor.css('visibility', 'hidden');
         $lbScreen.toggleClass('lb-following', false);
         $('#position-slider').val(1000).css('visibility', 'visible');
-        $('#startBut,#upBut,#downBut,#endBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', false);
+        $('#startBut,#upBut,#downBut,#endBut,#prevErrorBut,#nextErrorBut,#searchBut,#startMobBut,#endMobBut,#searchMobBut').attr('disabled', false);
 
         wsDisconnect();
     };
@@ -410,7 +439,7 @@
         return res;
     };
 
-    var fetchLines = function (lineCount, fromPos, action, searchText) {
+    var fetchLines = function (lineCount, fromPos, action, searchText, regexOverride, matchCaseOverride) {
         $loadingCursor.css('visibility', 'visible');
         $.ajax({
             url: svcUrl,
@@ -421,8 +450,8 @@
                 from: fromPos,
                 action: action,
                 search: searchText,
-                regex: g_searchRegex,
-                matchCase: g_searchMatchCase
+                regex: regexOverride !== undefined ? regexOverride : g_searchRegex,
+                matchCase: matchCaseOverride !== undefined ? matchCaseOverride : g_searchMatchCase
             }
         }).done(function (resp, textStatus, xhr) {
             // console.log(resp);

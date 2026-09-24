@@ -377,9 +377,17 @@ body > .lb-main-container {
     flex: 1;
 }
 
-.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button {
+.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button, .lb-error-nav-button {
     margin-top: 9px;
     margin-left: 10px;
+}
+
+.lb-error-nav-button {
+    background-color: #c0392b;
+}
+
+.lb-error-nav-button:hover {
+    background: #e74c3c radial-gradient(circle, transparent 1%, #e74c3c 1%) center/15000%;
 }
 
 .lb-up-button span {
