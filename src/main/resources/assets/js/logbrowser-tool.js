@@ -451,24 +451,45 @@
         });
     };
 
-    var buildLineEl = function (lineText, searchRegexp) {
-        var lineEl, p, part;
-        if (g_searchText) {
-            var parts = lineText.split(searchRegexp);
-            var lineParts = [];
-            for (p = 0; p < parts.length; p++) {
-                part = parts[p];
-                if (searchRegexp.test(part)) {
-                    lineParts.push($('<mark>').text(part));
-                } else {
-                    lineParts.push(document.createTextNode(part));
-                }
-            }
-            lineEl = $('<span/>').addClass('lb-logline').append(lineParts);
-        } else {
-            lineEl = $('<span/>').addClass('lb-logline').text(lineText);
+    var buildTextNodes = function (text, searchRegexp) {
+        var p, part;
+        if (!g_searchText) {
+            return [document.createTextNode(text)];
         }
-        return lineEl;
+        var parts = text.split(searchRegexp);
+        var nodes = [];
+        for (p = 0; p < parts.length; p++) {
+            part = parts[p];
+            if (searchRegexp.test(part)) {
+                nodes.push($('<mark>').text(part).get(0));
+            } else {
+                nodes.push(document.createTextNode(part));
+            }
+        }
+        return nodes;
+    };
+
+    var buildLineEl = function (lineText, searchRegexp) {
+        return $('<span/>').addClass('lb-logline').append(buildTextNodes(lineText, searchRegexp));
+    };
+
+    // Renders the header line with its level keyword (INFO/WARN/ERROR/...) wrapped in
+    // a colored, bold span, so the level is easy to scan even though the level accent
+    // border on the entry itself is subtle at a glance.
+    var buildHeaderLineEl = function (headerText, searchRegexp) {
+        var m = LEVEL_KEYWORD_RE.exec(headerText.substring(0, 80));
+        if (!m) {
+            return buildLineEl(headerText, searchRegexp);
+        }
+        var prefix = headerText.substring(0, m.index);
+        var levelWord = m[1];
+        var suffix = headerText.substring(m.index + levelWord.length);
+        var $lineEl = $('<span/>').addClass('lb-logline')
+            .append(buildTextNodes(prefix, searchRegexp))
+            .append($('<span/>').addClass('lb-level-word lb-level-word-' + levelWord.toLowerCase())
+                .append(buildTextNodes(levelWord, searchRegexp)))
+            .append(buildTextNodes(suffix, searchRegexp));
+        return $lineEl;
     };
 
     // A log entry is a header line (timestamp + level) plus any following lines that
@@ -531,7 +552,7 @@
 
     var buildEntryEl = function (entry, searchRegexp) {
         var $container = $('<div/>').addClass('lb-entry lb-entry-' + entry.level.toLowerCase());
-        var $header = buildLineEl(entry.lines[0].value, searchRegexp);
+        var $header = buildHeaderLineEl(entry.lines[0].value, searchRegexp);
         var originFrameIdx = entry.lines.length > 1 ? findOriginFrameIndex(entry) : -1;
 
         if (originFrameIdx > 0) {

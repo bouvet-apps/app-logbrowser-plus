@@ -202,6 +202,32 @@ body > .lb-main-container {
     border-left-color: #2ecc71;
 }
 
+.lb-level-word {
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+.lb-level-word-info {
+    color: #000;
+    background-color: #2ecc71;
+}
+
+.lb-level-word-warn {
+    color: #000;
+    background-color: #e67e22;
+}
+
+.lb-level-word-error {
+    color: #fff;
+    background-color: #e74c3c;
+}
+
+.lb-level-word-debug, .lb-level-word-trace {
+    color: #9CD9F0;
+    font-weight: bold;
+}
+
 .lb-entry-toggle {
     display: inline;
     cursor: pointer;
