@@ -1,4 +1,4 @@
-package com.enonic.app.logbrowser;
+package com.bouvet.app.logbrowserplus;
 
 public final class LogLine
 {

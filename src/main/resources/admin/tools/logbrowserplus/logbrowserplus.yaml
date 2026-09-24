@@ -1,5 +1,5 @@
 kind: "AdminTool"
-title: "Log Browser"
+title: "Log Browser Plus"
 description: "Browse and search the log"
 allow:
   - "role:system.admin"

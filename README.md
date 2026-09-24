@@ -1,8 +1,12 @@
-# Log Browser admin tool for Enonic XP
+# Log Browser Plus admin tool for Enonic XP
 
-<img align="right" alt="Log Browser Logo" src="https://rawgithub.com/aro/app-logbrowser/master/src/main/resources/assets/img/logbrowser.svg" width="128">
+<img align="right" alt="Log Browser Plus Logo" src="src/main/resources/assets/img/logbrowser.svg" width="128">
 
 This app allows remote browsing of the XP log file.
+
+This is a Bouvet-maintained fork of Enonic's [app-logbrowser](https://github.com/enonic/app-logbrowser)
+(Apache License 2.0), targeting Enonic XP 8 only, with the goal of adding a more
+readable log view (folding of multiline stack traces, filtering by log level).
 
 ## Features
 
@@ -29,8 +33,6 @@ The following keyboard shortcuts are available in the app:
 
 In addition the mouse wheel can be used for navigating up and down the file. 
 
-<img alt="Log Browser screenshot" src="https://rawgithub.com/aro/app-logbrowser/master/src/main/resources/assets/img/screenshot.png" width="480">
-
 ## Notes
 
 - A user needs to have the `system.admin` _role_ to get access to this tool.
@@ -38,12 +40,7 @@ In addition the mouse wheel can be used for navigating up and down the file.
 
 ## Releases and Compatibility
 
-| App version | Required XP version |
-| ----------- | ------------------- |
-| 2.0.0 | 7.0.0 |
-| 1.0.2 | 6.10.0 |
-| 1.0.1 | 6.10.0 |
-| 1.0.0 | 6.10.0 |
+This fork targets **Enonic XP 8** only. See `gradle.properties` for the exact `xpVersion`.
 
 
 ## Building and deploying
