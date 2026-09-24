@@ -14,6 +14,7 @@
     var DEFAULT_ORIGIN_SKIP_PREFIXES = ['java.', 'javax.', 'jdk.', 'sun.', 'com.enonic.', 'org.eclipse.',
         'org.graalvm.', 'com.oracle.truffle.', 'org.jruby.', 'groovy.', 'kotlin.', 'scala.', 'org.mvel2.'];
 
+    var g_lightTheme = false;
     var g_infoHide = false, g_infoMinimize = false;
     var g_warnHide = false, g_warnMinimize = true, g_errorHide = false, g_errorMinimize = false;
     var g_originSkipPrefixes = loadOriginSkipPrefixes();
@@ -33,6 +34,9 @@
                 currentPage();
             }, 500)
         );
+
+        loadThemePreference();
+        $('#themeToggleChk').prop('checked', g_lightTheme).on('change', onThemeToggleChange);
 
         loadLevelFilterSettings();
         $('#infoHideChk').prop('checked', g_infoHide).on('change', onLevelFilterChange);
@@ -625,6 +629,29 @@
             .filter(function (s) { return s.length > 0; });
         saveOriginSkipPrefixes(g_originSkipPrefixes);
         showLines(g_currentLines);
+    };
+
+    var applyTheme = function () {
+        document.documentElement.setAttribute('data-lb-theme', g_lightTheme ? 'light' : 'dark');
+    };
+
+    var loadThemePreference = function () {
+        try {
+            g_lightTheme = localStorage.getItem('lb-theme') === 'light';
+        } catch (e) {
+            // localStorage unavailable - keep default (dark)
+        }
+        applyTheme();
+    };
+
+    var onThemeToggleChange = function () {
+        g_lightTheme = $(this).is(':checked');
+        applyTheme();
+        try {
+            localStorage.setItem('lb-theme', g_lightTheme ? 'light' : 'dark');
+        } catch (e) {
+            // non-critical
+        }
     };
 
     var loadLevelFilterSettings = function () {

@@ -1,3 +1,37 @@
+:root {
+    --lb-screen-bg: #151515;
+    --lb-screen-fg: #CDEE69;
+    --lb-hover-bg: #2e2e2e;
+    --lb-hover-fg: #d1f75f;
+    --lb-mark-bg: #b3b300;
+    --lb-mark-bg-mid: #CACA00;
+    --lb-mark-fg: #000;
+    --lb-origin-frame-bg: #2e2e2e;
+    --lb-origin-frame-fg: #fff;
+    --lb-entry-toggle-fg: #9CD9F0;
+    --lb-entry-toggle-fg-hover: #fff;
+    --lb-following-border: #CDEE69;
+    --lb-following-border-alt: #46572b;
+    --lb-cursor-bg: #719600;
+}
+
+:root[data-lb-theme="light"] {
+    --lb-screen-bg: #fafafa;
+    --lb-screen-fg: #24292e;
+    --lb-hover-bg: #eef1f3;
+    --lb-hover-fg: #000;
+    --lb-mark-bg: #ffe066;
+    --lb-mark-bg-mid: #ffd43b;
+    --lb-mark-fg: #000;
+    --lb-origin-frame-bg: #fff3bf;
+    --lb-origin-frame-fg: #000;
+    --lb-entry-toggle-fg: #1a73e8;
+    --lb-entry-toggle-fg-hover: #0b47a1;
+    --lb-following-border: #2e7d32;
+    --lb-following-border-alt: #a5d6a7;
+    --lb-cursor-bg: #2e7d32;
+}
+
 html {
     height: 100%;
 }
@@ -136,20 +170,16 @@ body > .lb-main-container {
 
 .lb-screen {
     flex: 1;
-    background-color: #151515;
-    color: #CDEE69;
-    /*color: #22da26;*/
-    /*color: #9CD9F0;*/
-    /*color: #E09690;*/
-    /*height: 100%;*/
+    background-color: var(--lb-screen-bg);
+    color: var(--lb-screen-fg);
     padding: 5px;
 
     overflow-y: hidden;
-    border-bottom: 2px solid #151515;
+    border-bottom: 2px solid var(--lb-screen-bg);
 }
 
 .lb-screen.lb-following {
-    border-bottom: 2px solid #CDEE69;
+    border-bottom: 2px solid var(--lb-following-border);
     -webkit-animation: following-border 1s infinite alternate;
     -moz-transition: following-border 1s infinite alternate;
     -o-transition: following-border 1s infinite alternate;
@@ -158,10 +188,19 @@ body > .lb-main-container {
 
 @-webkit-keyframes following-border {
     0% {
-        border-bottom-color: #CDEE69;
+        border-bottom-color: var(--lb-following-border);
     }
     100% {
-        border-bottom-color: #46572b;
+        border-bottom-color: var(--lb-following-border-alt);
+    }
+}
+
+@keyframes following-border {
+    0% {
+        border-bottom-color: var(--lb-following-border);
+    }
+    100% {
+        border-bottom-color: var(--lb-following-border-alt);
     }
 }
 
@@ -180,8 +219,8 @@ body > .lb-main-container {
 }
 
 .lb-logline:hover {
-    background-color: #2e2e2e;
-    color: #d1f75f;
+    background-color: var(--lb-hover-bg);
+    color: var(--lb-hover-fg);
     cursor: pointer;
 }
 
@@ -231,16 +270,16 @@ body > .lb-main-container {
 .lb-entry-toggle {
     display: inline;
     cursor: pointer;
-    color: #9CD9F0;
+    color: var(--lb-entry-toggle-fg);
     user-select: none;
 }
 
 .lb-entry-toggle:hover {
-    color: #fff;
+    color: var(--lb-entry-toggle-fg-hover);
 }
 
 .lb-entry-origin {
-    color: #9CD9F0;
+    color: var(--lb-entry-toggle-fg);
     margin-left: 6px;
 }
 
@@ -253,14 +292,14 @@ body > .lb-main-container {
 }
 
 .lb-origin-frame {
-    background-color: #2e2e2e;
-    color: #fff;
+    background-color: var(--lb-origin-frame-bg);
+    color: var(--lb-origin-frame-fg);
     font-weight: bold;
 }
 
 .lb-logline mark {
-    background-color: #b3b300;
-    color: #000;
+    background-color: var(--lb-mark-bg);
+    color: var(--lb-mark-fg);
     animation-name: lb-logline-highlight;
     animation-duration: 2s;
     animation-iteration-count: infinite;
@@ -269,13 +308,13 @@ body > .lb-main-container {
 
 @keyframes lb-logline-highlight {
     0% {
-        background-color: #b3b300;
+        background-color: var(--lb-mark-bg);
     }
     50% {
-        background-color: #CACA00
+        background-color: var(--lb-mark-bg-mid);
     }
     100% {
-        background-color: #b3b300;
+        background-color: var(--lb-mark-bg);
     }
 }
 
@@ -540,9 +579,7 @@ input[type=range]:focus::-ms-fill-upper {
     height: 18px;
     border-radius: 1px;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-    /*background: #CDEE69;*/
-    /*background: #c90;*/
-    background: #719600;
+    background: var(--lb-cursor-bg);
 }
 
 @keyframes blinker {
