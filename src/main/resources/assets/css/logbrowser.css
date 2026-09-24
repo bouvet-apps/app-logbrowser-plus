@@ -242,8 +242,7 @@ body > .lb-main-container {
 }
 
 .lb-level-word {
-    font-weight: bold;
-    padding: 0 2px;
+    padding: 1px 6px;
     border-radius: 2px;
 }
 
