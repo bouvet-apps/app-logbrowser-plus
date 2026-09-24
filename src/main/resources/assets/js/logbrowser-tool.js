@@ -14,6 +14,7 @@
     var DEFAULT_ORIGIN_SKIP_PREFIXES = ['java.', 'javax.', 'jdk.', 'sun.', 'com.enonic.', 'org.eclipse.',
         'org.graalvm.', 'com.oracle.truffle.', 'org.jruby.', 'groovy.', 'kotlin.', 'scala.', 'org.mvel2.'];
 
+    var g_infoHide = false, g_infoMinimize = false;
     var g_warnHide = false, g_warnMinimize = true, g_errorHide = false, g_errorMinimize = false;
     var g_originSkipPrefixes = loadOriginSkipPrefixes();
     var g_lastEntries = []; // entries (incl. hidden) computed by the most recent showLines() call
@@ -34,6 +35,8 @@
         );
 
         loadLevelFilterSettings();
+        $('#infoHideChk').prop('checked', g_infoHide).on('change', onLevelFilterChange);
+        $('#infoMinimizeChk').prop('checked', g_infoMinimize).on('change', onLevelFilterChange);
         $('#warnHideChk').prop('checked', g_warnHide).on('change', onLevelFilterChange);
         $('#warnMinimizeChk').prop('checked', g_warnMinimize).on('change', onLevelFilterChange);
         $('#errorHideChk').prop('checked', g_errorHide).on('change', onLevelFilterChange);
@@ -494,11 +497,13 @@
     };
 
     var isEntryHidden = function (entry) {
-        return (entry.level === 'WARN' && g_warnHide) || (entry.level === 'ERROR' && g_errorHide);
+        return (entry.level === 'INFO' && g_infoHide) || (entry.level === 'WARN' && g_warnHide) ||
+            (entry.level === 'ERROR' && g_errorHide);
     };
 
     var isEntryMinimizedByDefault = function (entry) {
-        return (entry.level === 'WARN' && g_warnMinimize) || (entry.level === 'ERROR' && g_errorMinimize);
+        return (entry.level === 'INFO' && g_infoMinimize) || (entry.level === 'WARN' && g_warnMinimize) ||
+            (entry.level === 'ERROR' && g_errorMinimize);
     };
 
     var matchesAnyPrefix = function (fqcn, prefixes) {
@@ -583,6 +588,8 @@
     };
 
     var onLevelFilterChange = function () {
+        g_infoHide = $('#infoHideChk').is(':checked');
+        g_infoMinimize = $('#infoMinimizeChk').is(':checked');
         g_warnHide = $('#warnHideChk').is(':checked');
         g_warnMinimize = $('#warnMinimizeChk').is(':checked');
         g_errorHide = $('#errorHideChk').is(':checked');
@@ -603,6 +610,8 @@
         try {
             var stored = JSON.parse(localStorage.getItem('lb-level-filters'));
             if (stored) {
+                g_infoHide = !!stored.infoHide;
+                g_infoMinimize = !!stored.infoMinimize;
                 g_warnHide = !!stored.warnHide;
                 g_warnMinimize = !!stored.warnMinimize;
                 g_errorHide = !!stored.errorHide;
@@ -616,6 +625,7 @@
     var saveLevelFilterSettings = function () {
         try {
             localStorage.setItem('lb-level-filters', JSON.stringify({
+                infoHide: g_infoHide, infoMinimize: g_infoMinimize,
                 warnHide: g_warnHide, warnMinimize: g_warnMinimize,
                 errorHide: g_errorHide, errorMinimize: g_errorMinimize
             }));

@@ -54,6 +54,10 @@ body > .lb-main-container {
     border-left: 4px solid transparent;
 }
 
+.lb-level-label-info {
+    border-left-color: #2ecc71;
+}
+
 .lb-level-label-warn {
     border-left-color: #e67e22;
 }
