@@ -7,6 +7,17 @@
         g_searchForward = true,
         g_searchRegex = false;
 
+    // Log-level grouping/folding/highlighting (Log Browser Plus additions)
+    var LEVEL_KEYWORD_RE = /\b(TRACE|DEBUG|INFO|WARN|ERROR)\b/;
+    var CONTINUATION_START_RE = /^(\s|Caused by:|\.\.\.\s*\d+\s+more)/;
+    var STACK_FRAME_RE = /^\s*at\s+([\w$.]+)\(([^)]*)\)/;
+    var DEFAULT_ORIGIN_SKIP_PREFIXES = ['java.', 'javax.', 'jdk.', 'sun.', 'com.enonic.', 'org.eclipse.',
+        'org.graalvm.', 'com.oracle.truffle.', 'org.jruby.', 'groovy.', 'kotlin.', 'scala.', 'org.mvel2.'];
+
+    var g_warnHide = false, g_warnMinimize = true, g_errorHide = false, g_errorMinimize = false;
+    var g_originSkipPrefixes = loadOriginSkipPrefixes();
+    var g_lastEntries = []; // entries (incl. hidden) computed by the most recent showLines() call
+
     $(function () {
         $lbScreen = $('.lb-screen');
         $loadingCursor = $('.cursor-blink');
@@ -21,6 +32,15 @@
                 currentPage();
             }, 500)
         );
+
+        loadLevelFilterSettings();
+        $('#warnHideChk').prop('checked', g_warnHide).on('change', onLevelFilterChange);
+        $('#warnMinimizeChk').prop('checked', g_warnMinimize).on('change', onLevelFilterChange);
+        $('#errorHideChk').prop('checked', g_errorHide).on('change', onLevelFilterChange);
+        $('#errorMinimizeChk').prop('checked', g_errorMinimize).on('change', onLevelFilterChange);
+        $('#originSkipInput').val(g_originSkipPrefixes.join(', ')).on('change', onOriginSkipInputChange);
+
+        $lbScreen.on('click', '.lb-entry-toggle', onEntryToggleClick);
 
         fetchLines(g_linesHeight, 0, 'forward');
         $('#upBut').on('click', pageUpClick);
@@ -428,31 +448,200 @@
         });
     };
 
+    var buildLineEl = function (lineText, searchRegexp) {
+        var lineEl, p, part;
+        if (g_searchText) {
+            var parts = lineText.split(searchRegexp);
+            var lineParts = [];
+            for (p = 0; p < parts.length; p++) {
+                part = parts[p];
+                if (searchRegexp.test(part)) {
+                    lineParts.push($('<mark>').text(part));
+                } else {
+                    lineParts.push(document.createTextNode(part));
+                }
+            }
+            lineEl = $('<span/>').addClass('lb-logline').append(lineParts);
+        } else {
+            lineEl = $('<span/>').addClass('lb-logline').text(lineText);
+        }
+        return lineEl;
+    };
+
+    // A log entry is a header line (timestamp + level) plus any following lines that
+    // don't look like a new header (stack frames, multiline exception messages).
+    var detectHeaderLevel = function (text) {
+        if (CONTINUATION_START_RE.test(text)) {
+            return null;
+        }
+        var m = LEVEL_KEYWORD_RE.exec(text.substring(0, 80));
+        return m ? m[1] : null;
+    };
+
+    var groupEntries = function (lines) {
+        var entries = [], current = null, i, level;
+        for (i = 0; i < lines.length; i++) {
+            level = detectHeaderLevel(lines[i].value);
+            if (level || !current) {
+                current = {level: level || 'INFO', lines: [lines[i]], startIdx: i, endIdx: i};
+                entries.push(current);
+            } else {
+                current.lines.push(lines[i]);
+                current.endIdx = i;
+            }
+        }
+        return entries;
+    };
+
+    var isEntryHidden = function (entry) {
+        return (entry.level === 'WARN' && g_warnHide) || (entry.level === 'ERROR' && g_errorHide);
+    };
+
+    var isEntryMinimizedByDefault = function (entry) {
+        return (entry.level === 'WARN' && g_warnMinimize) || (entry.level === 'ERROR' && g_errorMinimize);
+    };
+
+    var matchesAnyPrefix = function (fqcn, prefixes) {
+        for (var p = 0; p < prefixes.length; p++) {
+            if (prefixes[p] && fqcn.indexOf(prefixes[p]) === 0) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    // Walks the stack frames of an entry (skipping the header) and returns the index
+    // (within entry.lines) of the first frame that isn't in the ignore-prefix list -
+    // i.e. our best guess at "where in our own code this actually happened".
+    var findOriginFrameIndex = function (entry) {
+        var i, m;
+        for (i = 1; i < entry.lines.length; i++) {
+            m = STACK_FRAME_RE.exec(entry.lines[i].value);
+            if (m && !matchesAnyPrefix(m[1], g_originSkipPrefixes)) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
+    var buildEntryEl = function (entry, searchRegexp) {
+        var $container = $('<div/>').addClass('lb-entry lb-entry-' + entry.level.toLowerCase());
+        var $header = buildLineEl(entry.lines[0].value, searchRegexp);
+        var originFrameIdx = entry.lines.length > 1 ? findOriginFrameIndex(entry) : -1;
+
+        if (originFrameIdx > 0) {
+            var frameMatch = STACK_FRAME_RE.exec(entry.lines[originFrameIdx].value);
+            $header.append($('<span/>').addClass('lb-entry-origin').text('→ ' + frameMatch[2]));
+        }
+
+        if (entry.lines.length === 1) {
+            $container.append($header);
+            return $container;
+        }
+
+        var collapsed = isEntryMinimizedByDefault(entry);
+        var $toggle = $('<span/>').addClass('lb-entry-toggle')
+            .text((collapsed ? '▶' : '▼') + ' Stack trace (' + (entry.lines.length - 1) + ' lines)');
+        var $body = $('<div/>').addClass('lb-entry-body');
+        if (!collapsed) {
+            $body.addClass('lb-entry-body-expanded');
+        }
+        for (var i = 1; i < entry.lines.length; i++) {
+            var $line = buildLineEl(entry.lines[i].value, searchRegexp);
+            if (i === originFrameIdx) {
+                $line.addClass('lb-origin-frame');
+            }
+            $body.append($line);
+        }
+
+        $container.append($header).append($toggle).append($body);
+        return $container;
+    };
+
+    var onEntryToggleClick = function () {
+        var $toggle = $(this);
+        var $body = $toggle.next('.lb-entry-body');
+        var expanded = $body.toggleClass('lb-entry-body-expanded').hasClass('lb-entry-body-expanded');
+        var lineCount = $body.children().length;
+        $toggle.text((expanded ? '▼' : '▶') + ' Stack trace (' + lineCount + ' lines)');
+    };
+
     var showLines = function (lines) {
-        var lineEl, i, linesEl = [], l = lines.length, lineText, p, part;
         var searchExpr = g_searchRegex ? g_searchText : escapeRegExp(g_searchText);
         var searchRegexp = new RegExp('(' + searchExpr + ')', g_searchMatchCase ? 'g' : 'gi');
-        for (i = 0; i < l; i++) {
-            lineText = lines[i].value;
-            if (g_searchText) {
-                var parts = lineText.split(searchRegexp);
 
-                var lineParts = [];
-                for (p = 0; p < parts.length; p++) {
-                    part = parts[p];
-                    if (searchRegexp.test(part)) {
-                        lineParts.push($('<mark>').text(part));
-                    } else {
-                        lineParts.push(document.createTextNode(part));
-                    }
-                }
-                lineEl = $('<span/>').addClass('lb-logline').append(lineParts);
-            } else {
-                lineEl = $('<span/>').addClass('lb-logline').text(lineText);
+        var entries = groupEntries(lines);
+        var entriesEl = [];
+        for (var i = 0; i < entries.length; i++) {
+            entries[i].hidden = isEntryHidden(entries[i]);
+            if (!entries[i].hidden) {
+                entriesEl.push(buildEntryEl(entries[i], searchRegexp));
             }
-            linesEl.push(lineEl);
         }
-        $lbScreen.empty().append(linesEl);
+        g_lastEntries = entries;
+        $lbScreen.empty().append(entriesEl);
+    };
+
+    var onLevelFilterChange = function () {
+        g_warnHide = $('#warnHideChk').is(':checked');
+        g_warnMinimize = $('#warnMinimizeChk').is(':checked');
+        g_errorHide = $('#errorHideChk').is(':checked');
+        g_errorMinimize = $('#errorMinimizeChk').is(':checked');
+        saveLevelFilterSettings();
+        showLines(g_currentLines);
+    };
+
+    var onOriginSkipInputChange = function () {
+        g_originSkipPrefixes = $(this).val().split(',')
+            .map(function (s) { return s.trim(); })
+            .filter(function (s) { return s.length > 0; });
+        saveOriginSkipPrefixes(g_originSkipPrefixes);
+        showLines(g_currentLines);
+    };
+
+    var loadLevelFilterSettings = function () {
+        try {
+            var stored = JSON.parse(localStorage.getItem('lb-level-filters'));
+            if (stored) {
+                g_warnHide = !!stored.warnHide;
+                g_warnMinimize = !!stored.warnMinimize;
+                g_errorHide = !!stored.errorHide;
+                g_errorMinimize = !!stored.errorMinimize;
+            }
+        } catch (e) {
+            // localStorage unavailable or corrupt - keep defaults
+        }
+    };
+
+    var saveLevelFilterSettings = function () {
+        try {
+            localStorage.setItem('lb-level-filters', JSON.stringify({
+                warnHide: g_warnHide, warnMinimize: g_warnMinimize,
+                errorHide: g_errorHide, errorMinimize: g_errorMinimize
+            }));
+        } catch (e) {
+            // non-critical
+        }
+    };
+
+    function loadOriginSkipPrefixes() {
+        try {
+            var stored = localStorage.getItem('lb-origin-skip-prefixes');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+        } catch (e) {
+            // localStorage unavailable or corrupt - fall back to default
+        }
+        return DEFAULT_ORIGIN_SKIP_PREFIXES.slice();
+    }
+
+    var saveOriginSkipPrefixes = function (prefixes) {
+        try {
+            localStorage.setItem('lb-origin-skip-prefixes', JSON.stringify(prefixes));
+        } catch (e) {
+            // non-critical
+        }
     };
 
     var debounce = function (func, wait, immediate) {
@@ -474,13 +663,29 @@
         };
     };
 
+    // g_lastEntries may group several raw lines into one rendered row (folded stack
+    // trace) or skip some entirely (level hidden), so a rendered DOM row no longer
+    // corresponds 1:1 to a g_currentLines item - map back via the entry's raw-line
+    // index range instead of assuming one row = one line.
+    var getVisibleEntries = function () {
+        var visible = [];
+        for (var i = 0; i < g_lastEntries.length; i++) {
+            if (!g_lastEntries[i].hidden) {
+                visible.push(g_lastEntries[i]);
+            }
+        }
+        return visible;
+    };
+
     var removeOverflownRows = function () {
         var rows = $lbScreen.children(), r, l = rows.length, row;
         if (l <= 1) {
             return;
         }
+        var visibleEntries = getVisibleEntries();
         var clientHeight = window.innerHeight || document.documentElement.clientHeight;
         var clientWidth = window.innerWidth || document.documentElement.clientWidth;
+        var cutoffEntry = null;
         for (r = l - 1; r >= 0; r--) {
             row = rows[r];
             var rect = row.getBoundingClientRect();
@@ -488,8 +693,10 @@
             if (isRowVisible) {
                 break;
             }
-            // rows[r].remove();
-            g_currentLines.pop();
+            cutoffEntry = visibleEntries[r];
+        }
+        if (cutoffEntry) {
+            g_currentLines.length = cutoffEntry.startIdx;
         }
     };
 
@@ -498,6 +705,7 @@
         if (l <= 1) {
             return;
         }
+        var visibleEntries = getVisibleEntries();
 
         var lineCount = 0;
         for (r = l - 1; r >= 0; r--) {
@@ -509,9 +717,12 @@
             }
         }
 
-        for (; r >= 0; r--) {
-            rows[r].remove();
-            g_currentLines.splice(r, 1);
+        if (r >= 0) {
+            var cutoffEndIdx = visibleEntries[r].endIdx;
+            for (var k = r; k >= 0; k--) {
+                rows[k].remove();
+            }
+            g_currentLines.splice(0, cutoffEndIdx + 1);
         }
     };
 

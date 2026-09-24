@@ -3,14 +3,14 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, user-scalable=no">
-    <title>Log Browser</title>
+    <title>Log Browser Plus</title>
     <link rel="stylesheet" type="text/css" href="{{assetsUri}}/css/logbrowser.css">
     <link rel="shortcut icon" href="{{assetsUri}}/img/logbrowser.png">
 </head>
 <body>
 <div class="appbar">
     <button class="home-button">
-        <span class="home-button-text">Log Browser</span>
+        <span class="home-button-text">Log Browser Plus</span>
     </button>
     <span class="cursor-blink"></span>
 
@@ -49,6 +49,23 @@
             <input id="position-slider" class="slider" type="range" min="0" max="1000" step="10" value="0"/>
         </div>
     </div>
+</div>
+
+<div class="lb-level-filters">
+    <span class="lb-level-filters-group">
+        <span class="lb-level-filters-label lb-level-label-warn">Warnings:</span>
+        <label><input type="checkbox" id="warnHideChk"> Skjul</label>
+        <label><input type="checkbox" id="warnMinimizeChk" checked> Minimer</label>
+    </span>
+    <span class="lb-level-filters-group">
+        <span class="lb-level-filters-label lb-level-label-error">Errors:</span>
+        <label><input type="checkbox" id="errorHideChk"> Skjul</label>
+        <label><input type="checkbox" id="errorMinimizeChk"> Minimer</label>
+    </span>
+    <span class="lb-level-filters-group lb-origin-settings">
+        <label for="originSkipInput">Ignorer i stack trace (prefikser, kommaseparert):</label>
+        <input type="text" id="originSkipInput" class="lb-origin-skip-input">
+    </span>
 </div>
 
 <div class="lb-main-container">

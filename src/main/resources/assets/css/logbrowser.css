@@ -15,9 +15,63 @@ body {
 }
 
 body > .lb-main-container {
-    height: calc(100% - 44px);
+    height: calc(100% - 44px - 34px);
     display: flex;
     flex-direction: column;
+}
+
+.lb-level-filters {
+    height: 34px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 0 15px;
+    background-color: #e4e4e4;
+    font-family: "Open Sans", sans-serif;
+    font-size: 13px;
+    color: #4a4a4a;
+}
+
+.lb-level-filters-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lb-level-filters-group label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.lb-level-filters-label {
+    font-weight: 600;
+    padding-left: 10px;
+    border-left: 4px solid transparent;
+}
+
+.lb-level-label-warn {
+    border-left-color: #e67e22;
+}
+
+.lb-level-label-error {
+    border-left-color: #e74c3c;
+}
+
+.lb-origin-settings {
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 260px;
+}
+
+.lb-origin-skip-input {
+    width: 260px;
+    font-size: 12px;
+    padding: 2px 5px;
 }
 
 .appbar {
@@ -125,6 +179,53 @@ body > .lb-main-container {
     background-color: #2e2e2e;
     color: #d1f75f;
     cursor: pointer;
+}
+
+.lb-entry {
+    border-left: 4px solid transparent;
+    padding-left: 6px;
+}
+
+.lb-entry-error {
+    border-left-color: #e74c3c;
+}
+
+.lb-entry-warn {
+    border-left-color: #e67e22;
+}
+
+.lb-entry-info {
+    border-left-color: #2ecc71;
+}
+
+.lb-entry-toggle {
+    display: inline;
+    cursor: pointer;
+    color: #9CD9F0;
+    user-select: none;
+}
+
+.lb-entry-toggle:hover {
+    color: #fff;
+}
+
+.lb-entry-origin {
+    color: #9CD9F0;
+    margin-left: 6px;
+}
+
+.lb-entry-body {
+    display: none;
+}
+
+.lb-entry-body.lb-entry-body-expanded {
+    display: block;
+}
+
+.lb-origin-frame {
+    background-color: #2e2e2e;
+    color: #fff;
+    font-weight: bold;
 }
 
 .lb-logline mark {
