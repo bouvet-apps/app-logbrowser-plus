@@ -1,4 +1,4 @@
-package com.bouvet.app.logbrowserplus;
+package com.bouvet.app.logbrowser2;
 
 import java.io.File;
 import java.nio.file.Path;

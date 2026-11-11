@@ -7,7 +7,7 @@
         g_searchForward = true,
         g_searchRegex = false;
 
-    // Log-level grouping/folding/highlighting (Log Browser Plus additions)
+    // Log-level grouping/folding/highlighting (Log Browser 2 additions)
     var LEVEL_KEYWORD_RE = /\b(TRACE|DEBUG|INFO|WARN|ERROR)\b/;
     var CONTINUATION_START_RE = /^(\s|Caused by:|\.\.\.\s*\d+\s+more)/;
     var STACK_FRAME_RE = /^\s*at\s+([\w$.]+)\(([^)]*)\)/;

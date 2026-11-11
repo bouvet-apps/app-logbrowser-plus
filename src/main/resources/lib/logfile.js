@@ -1,7 +1,7 @@
-var logTailManager = __.newBean('com.bouvet.app.logbrowserplus.LogTailManager');
+var logTailManager = __.newBean('com.bouvet.app.logbrowser2.LogTailManager');
 
 exports.getLines = function (params) {
-    var bean = __.newBean('com.bouvet.app.logbrowserplus.LogFileHandler');
+    var bean = __.newBean('com.bouvet.app.logbrowser2.LogFileHandler');
     bean.setLineCount(__.nullOrValue(params.lineCount));
     bean.setFrom(__.nullOrValue(params.from));
     bean.setAction(params.action || 'forward');

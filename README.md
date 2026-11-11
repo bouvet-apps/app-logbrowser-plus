@@ -1,12 +1,18 @@
-# Log Browser Plus admin tool for Enonic XP
+# Log Browser 2 admin tool for Enonic XP
 
-<img align="right" alt="Log Browser Plus Logo" src="src/main/resources/assets/img/logbrowser.svg" width="128">
+<img align="right" alt="Log Browser 2 Logo" src="src/main/resources/assets/img/logbrowser.svg" width="128">
 
 This app allows remote browsing of the XP log file.
 
 This is a Bouvet-maintained fork of Enonic's [app-logbrowser](https://github.com/enonic/app-logbrowser)
-(Apache License 2.0), targeting Enonic XP 8 only, with the goal of adding a more
-readable log view (folding of multiline stack traces, filtering by log level).
+(Apache License 2.0), targeting **Enonic XP 8 only**, with a more readable log view
+(folding of multiline stack traces, filtering by log level).
+
+Not to be confused with Bouvet's other fork,
+[app-logbrowser-plus](https://github.com/bouvet-apps/app-logbrowser-plus) ("Log Browser
+Plus"), which targets XP 7 and was built independently. Both apps started from a similar
+idea; they are separate codebases with different `appId`s and can be installed side by
+side.
 
 ## Features
 

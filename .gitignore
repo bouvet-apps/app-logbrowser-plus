@@ -2,6 +2,7 @@
 build/
 bin/
 .vscode/
+.enonic
 temp/
 temp/*.*
 target/

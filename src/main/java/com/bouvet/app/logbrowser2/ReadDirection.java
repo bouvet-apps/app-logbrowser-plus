@@ -1,4 +1,4 @@
-package com.bouvet.app.logbrowserplus;
+package com.bouvet.app.logbrowser2;
 
 public enum ReadDirection
 {

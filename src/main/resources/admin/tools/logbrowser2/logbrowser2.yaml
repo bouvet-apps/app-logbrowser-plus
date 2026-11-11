@@ -1,0 +1,7 @@
+kind: "AdminTool"
+title: "Log Browser 2"
+description: "Browse and search the log (XP 8)"
+allow:
+  - "role:system.admin"
+apis:
+  - "asset"

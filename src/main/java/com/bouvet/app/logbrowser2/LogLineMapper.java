@@ -1,4 +1,4 @@
-package com.bouvet.app.logbrowserplus;
+package com.bouvet.app.logbrowser2;
 
 import com.enonic.xp.script.serializer.MapGenerator;
 import com.enonic.xp.script.serializer.MapSerializable;
