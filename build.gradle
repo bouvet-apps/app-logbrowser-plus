@@ -6,8 +6,8 @@ plugins {
 
 repositories {
     mavenLocal()
-    mavenCentral()
     xp.enonicRepo('dev')
+    mavenCentral()
 }
 
 dependencies {
@@ -29,5 +29,5 @@ test {
 }
 
 xp {
-    scriptEngines = ['Nashorn', 'GraalJS']
+    scriptEngines = ['Nashorn']
 }
