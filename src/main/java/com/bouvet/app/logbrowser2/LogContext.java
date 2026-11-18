@@ -1,4 +1,4 @@
-package com.enonic.app.logbrowser;
+package com.bouvet.app.logbrowser2;
 
 import java.util.Collections;
 import java.util.List;

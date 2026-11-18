@@ -1,4 +1,4 @@
-package com.enonic.app.logbrowser;
+package com.bouvet.app.logbrowser2;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

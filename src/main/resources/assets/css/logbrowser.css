@@ -1,3 +1,37 @@
+:root {
+    --lb-screen-bg: #012169;
+    --lb-screen-fg: #ffffff;
+    --lb-hover-bg: #15337d;
+    --lb-hover-fg: #ffffff;
+    --lb-mark-bg: #b3b300;
+    --lb-mark-bg-mid: #CACA00;
+    --lb-mark-fg: #000;
+    --lb-origin-frame-bg: #15337d;
+    --lb-origin-frame-fg: #fff;
+    --lb-entry-toggle-fg: #9CD9F0;
+    --lb-entry-toggle-fg-hover: #fff;
+    --lb-following-border: #ffffff;
+    --lb-following-border-alt: #3a5a9a;
+    --lb-cursor-bg: #ffffff;
+}
+
+:root[data-lb-theme="light"] {
+    --lb-screen-bg: #fafafa;
+    --lb-screen-fg: #24292e;
+    --lb-hover-bg: #eef1f3;
+    --lb-hover-fg: #000;
+    --lb-mark-bg: #ffe066;
+    --lb-mark-bg-mid: #ffd43b;
+    --lb-mark-fg: #000;
+    --lb-origin-frame-bg: #fff3bf;
+    --lb-origin-frame-fg: #000;
+    --lb-entry-toggle-fg: #1a73e8;
+    --lb-entry-toggle-fg-hover: #0b47a1;
+    --lb-following-border: #2e7d32;
+    --lb-following-border-alt: #a5d6a7;
+    --lb-cursor-bg: #2e7d32;
+}
+
 html {
     height: 100%;
 }
@@ -15,9 +49,67 @@ body {
 }
 
 body > .lb-main-container {
-    height: calc(100% - 44px);
+    height: calc(100% - 44px - 34px);
     display: flex;
     flex-direction: column;
+}
+
+.lb-level-filters {
+    height: 34px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 18px;
+    padding: 0 15px;
+    background-color: #e4e4e4;
+    font-family: "Open Sans", sans-serif;
+    font-size: 13px;
+    color: #4a4a4a;
+}
+
+.lb-level-filters-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.lb-level-filters-group label {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    margin: 0;
+}
+
+.lb-level-filters-label {
+    font-weight: 600;
+    padding-left: 10px;
+    border-left: 4px solid transparent;
+}
+
+.lb-level-label-info {
+    border-left-color: #2ecc71;
+}
+
+.lb-level-label-warn {
+    border-left-color: #e67e22;
+}
+
+.lb-level-label-error {
+    border-left-color: #e74c3c;
+}
+
+.lb-origin-settings {
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 260px;
+}
+
+.lb-origin-skip-input {
+    width: 260px;
+    font-size: 12px;
+    padding: 2px 5px;
 }
 
 .appbar {
@@ -78,20 +170,16 @@ body > .lb-main-container {
 
 .lb-screen {
     flex: 1;
-    background-color: #151515;
-    color: #CDEE69;
-    /*color: #22da26;*/
-    /*color: #9CD9F0;*/
-    /*color: #E09690;*/
-    /*height: 100%;*/
+    background-color: var(--lb-screen-bg);
+    color: var(--lb-screen-fg);
     padding: 5px;
 
     overflow-y: hidden;
-    border-bottom: 2px solid #151515;
+    border-bottom: 2px solid var(--lb-screen-bg);
 }
 
 .lb-screen.lb-following {
-    border-bottom: 2px solid #CDEE69;
+    border-bottom: 2px solid var(--lb-following-border);
     -webkit-animation: following-border 1s infinite alternate;
     -moz-transition: following-border 1s infinite alternate;
     -o-transition: following-border 1s infinite alternate;
@@ -100,10 +188,19 @@ body > .lb-main-container {
 
 @-webkit-keyframes following-border {
     0% {
-        border-bottom-color: #CDEE69;
+        border-bottom-color: var(--lb-following-border);
     }
     100% {
-        border-bottom-color: #46572b;
+        border-bottom-color: var(--lb-following-border-alt);
+    }
+}
+
+@keyframes following-border {
+    0% {
+        border-bottom-color: var(--lb-following-border);
+    }
+    100% {
+        border-bottom-color: var(--lb-following-border-alt);
     }
 }
 
@@ -122,14 +219,86 @@ body > .lb-main-container {
 }
 
 .lb-logline:hover {
-    background-color: #2e2e2e;
-    color: #d1f75f;
+    background-color: var(--lb-hover-bg);
+    color: var(--lb-hover-fg);
     cursor: pointer;
 }
 
-.lb-logline mark {
-    background-color: #b3b300;
+.lb-entry {
+    border-left: 4px solid transparent;
+    padding-left: 6px;
+}
+
+.lb-entry-error {
+    border-left-color: #e74c3c;
+}
+
+.lb-entry-warn {
+    border-left-color: #e67e22;
+}
+
+.lb-entry-info {
+    border-left-color: #2ecc71;
+}
+
+.lb-level-word {
+    padding: 1px 6px;
+    border-radius: 2px;
+}
+
+.lb-level-word-info {
     color: #000;
+    background-color: #2ecc71;
+}
+
+.lb-level-word-warn {
+    color: #000;
+    background-color: #e67e22;
+}
+
+.lb-level-word-error {
+    color: #fff;
+    background-color: #e74c3c;
+}
+
+.lb-level-word-debug, .lb-level-word-trace {
+    color: #9CD9F0;
+    font-weight: bold;
+}
+
+.lb-entry-toggle {
+    display: inline;
+    cursor: pointer;
+    color: var(--lb-entry-toggle-fg);
+    user-select: none;
+}
+
+.lb-entry-toggle:hover {
+    color: var(--lb-entry-toggle-fg-hover);
+}
+
+.lb-entry-origin {
+    color: var(--lb-entry-toggle-fg);
+    margin-left: 6px;
+}
+
+.lb-entry-body {
+    display: none;
+}
+
+.lb-entry-body.lb-entry-body-expanded {
+    display: block;
+}
+
+.lb-origin-frame {
+    background-color: var(--lb-origin-frame-bg);
+    color: var(--lb-origin-frame-fg);
+    font-weight: bold;
+}
+
+.lb-logline mark {
+    background-color: var(--lb-mark-bg);
+    color: var(--lb-mark-fg);
     animation-name: lb-logline-highlight;
     animation-duration: 2s;
     animation-iteration-count: infinite;
@@ -138,13 +307,13 @@ body > .lb-main-container {
 
 @keyframes lb-logline-highlight {
     0% {
-        background-color: #b3b300;
+        background-color: var(--lb-mark-bg);
     }
     50% {
-        background-color: #CACA00
+        background-color: var(--lb-mark-bg-mid);
     }
     100% {
-        background-color: #b3b300;
+        background-color: var(--lb-mark-bg);
     }
 }
 
@@ -208,9 +377,17 @@ body > .lb-main-container {
     flex: 1;
 }
 
-.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button {
+.lb-up-button, .lb-down-button, .lb-start-button, .lb-end-button, .lb-tail-button, .lb-search-button, .lb-start-mob-button, .lb-end-mob-button, .lb-search-mob-button, .lb-error-nav-button {
     margin-top: 9px;
     margin-left: 10px;
+}
+
+.lb-error-nav-button {
+    background-color: #c0392b;
+}
+
+.lb-error-nav-button:hover {
+    background: #e74c3c radial-gradient(circle, transparent 1%, #e74c3c 1%) center/15000%;
 }
 
 .lb-up-button span {
@@ -409,9 +586,7 @@ input[type=range]:focus::-ms-fill-upper {
     height: 18px;
     border-radius: 1px;
     box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-    /*background: #CDEE69;*/
-    /*background: #c90;*/
-    background: #719600;
+    background: var(--lb-cursor-bg);
 }
 
 @keyframes blinker {
